@@ -1,2087 +1,706 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import {
-  Calendar as CalendarIcon,
-  Package,
-  Plus,
-  Search,
-  ChevronLeft,
-  ChevronRight,
-  ChevronDown,
-  ChevronUp,
-  Clock,
-  Phone,
-  Sparkles,
-  CheckCircle2,
-  XCircle,
-  AlertTriangle,
-  ArrowUpRight,
-  ArrowDownRight,
-  Download,
-  Edit3,
-  Trash2,
-  DollarSign,
-  Filter,
-  User,
-  FileText,
-  X,
-  Check,
-  Layers,
-  TrendingUp,
-  ArrowLeft,
-  Home
-} from 'lucide-react';
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Aura Nail Studio - Citas e Inventario</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- React & ReactDOM -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <!-- Babel para interpretar JSX directamente en el navegador -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body class="bg-[#FDF8F6] text-stone-800 antialiased">
+  <div id="root"></div>
 
-// ============================================================================
-// UTILIDADES Y DATOS INICIALES DE EJEMPLO (PRECARGADOS PARA USO INMEDIATO)
-// ============================================================================
+  <script type="text/babel">
+    const { useState, useMemo, useEffect } = React;
 
-const getFormattedDate = (offsetDays = 0) => {
-  const date = new Date();
-  date.setDate(date.getDate() + offsetDays);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
-
-const TODAY_STR = getFormattedDate(0);
-const TOMORROW_STR = getFormattedDate(1);
-const DAY_AFTER_STR = getFormattedDate(2);
-const YESTERDAY_STR = getFormattedDate(-1);
-
-const INITIAL_APPOINTMENTS = [
-  {
-    id: 'cit-101',
-    date: TODAY_STR,
-    time: '10:00',
-    clientName: 'Valeria Mendoza',
-    phone: '526871234567',
-    service: 'Uñas Acrílicas Esculturales + Diseño',
-    price: 550,
-    status: 'Completada',
-    notes: 'Tono nude con french blanco y pedrería sutil en anular.'
-  },
-  {
-    id: 'cit-102',
-    date: TODAY_STR,
-    time: '13:30',
-    clientName: 'Camila Rodríguez',
-    phone: '526879876543',
-    service: 'Soft Gel + Efecto Aurora',
-    price: 420,
-    status: 'Pendiente',
-    notes: 'Trae referencia de Pinterest, largo mediano almendra.'
-  },
-  {
-    id: 'cit-103',
-    date: TODAY_STR,
-    time: '16:30',
-    clientName: 'Sofía Castro',
-    phone: '526875551234',
-    service: 'Retoque Acrílico + Gelish',
-    price: 350,
-    status: 'Pendiente',
-    notes: 'Revisar uña índice derecha, comentó que se le levantó un poco.'
-  },
-  {
-    id: 'cit-104',
-    date: TOMORROW_STR,
-    time: '11:00',
-    clientName: 'Mariana López',
-    phone: '526874448899',
-    service: 'Manicura Rusa + Nivelación Rubber',
-    price: 380,
-    status: 'Pendiente',
-    notes: 'Color vino tinto clásico.'
-  },
-  {
-    id: 'cit-105',
-    date: TOMORROW_STR,
-    time: '15:00',
-    clientName: 'Fernanda Ruiz',
-    phone: '526873332211',
-    service: 'Set Nuevo Acrílico Baby Boomer',
-    price: 500,
-    status: 'Pendiente',
-    notes: 'Primera vez en el estudio.'
-  },
-  {
-    id: 'cit-106',
-    date: DAY_AFTER_STR,
-    time: '12:00',
-    clientName: 'Andrea Morales',
-    phone: '526872221100',
-    service: 'Gelish en Uña Natural + Pedicure Spa',
-    price: 480,
-    status: 'Pendiente',
-    notes: 'Clienta frecuente, prefiere tonos pastel.'
-  }
-];
-
-const INITIAL_INVENTORY = [
-  {
-    id: 'inv-1',
-    sku: 'MON-001',
-    name: 'Monómero Bajo Aroma 8 oz',
-    category: 'Acrílico',
-    stock: 4,
-    minStock: 2,
-    unitCost: 320.00
-  },
-  {
-    id: 'inv-2',
-    sku: 'POL-002',
-    name: 'Polímero Cristal Ultra Fine 4 oz',
-    category: 'Acrílico',
-    stock: 2,
-    minStock: 3,
-    unitCost: 240.00
-  },
-  {
-    id: 'inv-3',
-    sku: 'GEL-015',
-    name: 'Base Coat & Top Coat Ruber Duo',
-    category: 'Geles',
-    stock: 6,
-    minStock: 2,
-    unitCost: 185.00
-  },
-  {
-    id: 'inv-4',
-    sku: 'LIM-100',
-    name: 'Paquete Limas 100/180 Zebra (25 pzas)',
-    category: 'Herramientas',
-    stock: 1,
-    minStock: 2,
-    unitCost: 160.00
-  },
-  {
-    id: 'inv-5',
-    sku: 'TIP-500',
-    name: 'Caja Tips Soft Gel Almendra (500 pzas)',
-    category: 'Tips y Formas',
-    stock: 5,
-    minStock: 2,
-    unitCost: 210.00
-  },
-  {
-    id: 'inv-6',
-    sku: 'ACE-999',
-    name: 'Acetona Pura Grado Salón 1 Litro',
-    category: 'Líquidos',
-    stock: 3,
-    minStock: 2,
-    unitCost: 95.00
-  },
-  {
-    id: 'inv-7',
-    sku: 'GAM-024',
-    name: 'Gama Gelish Tonos Nude & Rose (6 pzas)',
-    category: 'Geles',
-    stock: 3,
-    minStock: 1,
-    unitCost: 450.00
-  }
-];
-
-const INITIAL_MOVEMENTS = [
-  {
-    id: 'mov-1',
-    date: YESTERDAY_STR,
-    itemId: 'inv-1',
-    itemName: 'Monómero Bajo Aroma 8 oz',
-    sku: 'MON-001',
-    type: 'ENTRADA',
-    quantity: 3,
-    unitCost: 320.00,
-    totalCost: 960.00,
-    notes: 'Compra a proveedor oficial para surtido del mes.'
-  },
-  {
-    id: 'mov-2',
-    date: TODAY_STR,
-    itemId: 'inv-4',
-    itemName: 'Paquete Limas 100/180 Zebra (25 pzas)',
-    sku: 'LIM-100',
-    type: 'SALIDA',
-    quantity: 1,
-    unitCost: 160.00,
-    totalCost: 160.00,
-    notes: 'Apertura de paquete para mesas de trabajo 1 y 2.'
-  },
-  {
-    id: 'mov-3',
-    date: TODAY_STR,
-    itemId: 'inv-2',
-    itemName: 'Polímero Cristal Ultra Fine 4 oz',
-    sku: 'POL-002',
-    type: 'SALIDA',
-    quantity: 1,
-    unitCost: 240.00,
-    totalCost: 240.00,
-    notes: 'Consumo semanal en aplicaciones esculturales.'
-  }
-];
-
-const NAIL_SERVICES = [
-  'Uñas Acrílicas Esculturales',
-  'Set Nuevo Acrílico con Tip',
-  'Retoque Acrílico + Gelish',
-  'Soft Gel + Diseño',
-  'Gelish en Uña Natural',
-  'Manicura Rusa + Nivelación Rubber',
-  'Retiro de Sistema + Manicura',
-  'Pedicure Spa + Gelish'
-];
-
-const INVENTORY_CATEGORIES = [
-  'Acrílico',
-  'Geles',
-  'Tips y Formas',
-  'Herramientas',
-  'Líquidos',
-  'Decoración',
-  'Desechables'
-];
-
-const MONTHS_ES = [
-  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-];
-
-const DAYS_SHORT_ES = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-
-// ============================================================================
-// COMPONENTE PRINCIPAL
-// ============================================================================
-
-export default function App() {
-  // Navegación principal por pantallas independientes: 'home', 'citas' o 'inventario'
-  const [activeScreen, setActiveScreen] = useState('home');
-
-  // Estados principales de datos con persistencia en localStorage
-  const [appointments, setAppointments] = useState(() => {
-    try {
-      const saved = localStorage.getItem('aura_nail_appointments');
-      return saved ? JSON.parse(saved) : INITIAL_APPOINTMENTS;
-    } catch {
-      return INITIAL_APPOINTMENTS;
-    }
-  });
-
-  const [inventory, setInventory] = useState(() => {
-    try {
-      const saved = localStorage.getItem('aura_nail_inventory');
-      return saved ? JSON.parse(saved) : INITIAL_INVENTORY;
-    } catch {
-      return INITIAL_INVENTORY;
-    }
-  });
-
-  const [movements, setMovements] = useState(() => {
-    try {
-      const saved = localStorage.getItem('aura_nail_movements');
-      return saved ? JSON.parse(saved) : INITIAL_MOVEMENTS;
-    } catch {
-      return INITIAL_MOVEMENTS;
-    }
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('aura_nail_appointments', JSON.stringify(appointments));
-    } catch (e) {
-      console.error('Error guardando citas en localStorage', e);
-    }
-  }, [appointments]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('aura_nail_inventory', JSON.stringify(inventory));
-    } catch (e) {
-      console.error('Error guardando inventario en localStorage', e);
-    }
-  }, [inventory]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('aura_nail_movements', JSON.stringify(movements));
-    } catch (e) {
-      console.error('Error guardando movimientos en localStorage', e);
-    }
-  }, [movements]);
-
-  // Notificaciones Toast internas
-  const [toast, setToast] = useState(null);
-
-  const showToast = (message, type = 'success') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 3500);
-  };
-
-  // ==========================================================================
-  // ESTADOS Y LÓGICA DEL MÓDULO DE CITAS Y CALENDARIO
-  // ==========================================================================
-  const [selectedDate, setSelectedDate] = useState(TODAY_STR);
-  const [currentMonthDate, setCurrentMonthDate] = useState(() => {
-    const [y, m] = TODAY_STR.split('-').map(Number);
-    return new Date(y, m - 1, 1);
-  });
-  const [expandedAppointmentId, setExpandedAppointmentId] = useState('cit-102');
-  const [isDayAccordionOpen, setIsDayAccordionOpen] = useState(true);
-  const [appointmentModalOpen, setAppointmentModalOpen] = useState(false);
-  const [editingAppointment, setEditingAppointment] = useState(null);
-  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
-
-  const [appointmentForm, setAppointmentForm] = useState({
-    date: TODAY_STR,
-    time: '12:00',
-    clientName: '',
-    phone: '',
-    service: NAIL_SERVICES[0],
-    price: 450,
-    status: 'Pendiente',
-    notes: ''
-  });
-
-  // Generar días del calendario mensual
-  const calendarDays = useMemo(() => {
-    const year = currentMonthDate.getFullYear();
-    const month = currentMonthDate.getMonth();
-    const firstDayOfMonth = new Date(year, month, 1).getDay();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-    const daysArray = [];
-    for (let i = 0; i < firstDayOfMonth; i++) {
-      daysArray.push(null);
-    }
-    for (let d = 1; d <= daysInMonth; d++) {
-      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-      const dayAppointments = appointments.filter(a => a.date === dateStr);
-      daysArray.push({
-        day: d,
-        dateStr,
-        appointments: dayAppointments
-      });
-    }
-    return daysArray;
-  }, [currentMonthDate, appointments]);
-
-  // Citas del día seleccionado ordenadas por hora
-  const selectedDayAppointments = useMemo(() => {
-    return appointments
-      .filter(a => a.date === selectedDate)
-      .sort((a, b) => a.time.localeCompare(b.time));
-  }, [appointments, selectedDate]);
-
-  // Próximos días con citas (para vista rápida desplegable)
-  const upcomingGroupedDays = useMemo(() => {
-    const futureOrToday = appointments.filter(a => a.date >= TODAY_STR && a.status !== 'Cancelada');
-    const grouped = {};
-    futureOrToday.forEach(app => {
-      if (!grouped[app.date]) grouped[app.date] = [];
-      grouped[app.date].push(app);
-    });
-    return Object.entries(grouped)
-      .sort(([dateA], [dateB]) => dateA.localeCompare(dateB))
-      .slice(0, 5);
-  }, [appointments]);
-
-  const handlePrevMonth = () => {
-    setCurrentMonthDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
-  };
-
-  const handleNextMonth = () => {
-    setCurrentMonthDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
-  };
-
-  const openNewAppointmentModal = (preselectedDate = selectedDate) => {
-    setEditingAppointment(null);
-    setAppointmentForm({
-      date: preselectedDate,
-      time: '11:00',
-      clientName: '',
-      phone: '',
-      service: NAIL_SERVICES[0],
-      price: 450,
-      status: 'Pendiente',
-      notes: ''
-    });
-    setAppointmentModalOpen(true);
-  };
-
-  const openEditAppointmentModal = (app) => {
-    setEditingAppointment(app);
-    setAppointmentForm({ ...app });
-    setAppointmentModalOpen(true);
-  };
-
-  const handleSaveAppointment = (e) => {
-    e.preventDefault();
-    if (!appointmentForm.clientName.trim()) {
-      showToast('Por favor ingresa el nombre de la clienta', 'error');
-      return;
-    }
-
-    if (editingAppointment) {
-      setAppointments(prev =>
-        prev.map(item =>
-          item.id === editingAppointment.id ? { ...appointmentForm, id: item.id } : item
-        )
-      );
-      showToast('Cita actualizada correctamente');
-    } else {
-      const newApp = {
-        ...appointmentForm,
-        id: `cit-${Date.now()}`,
-        price: Number(appointmentForm.price) || 0
+    // ========================================================================
+    // ICONOS SVG INTEGRADOS (Cero dependencias externas que puedan fallar)
+    // ========================================================================
+    const Icon = ({ name, className = "w-5 h-5" }) => {
+      const icons = {
+        sparkles: <><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/></>,
+        calendar: <><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></>,
+        package: <><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></>,
+        chevronRight: <polyline points="9 18 15 12 9 6"/>,
+        chevronLeft: <polyline points="15 18 9 12 15 6"/>,
+        chevronDown: <polyline points="6 9 12 15 18 9"/>,
+        chevronUp: <polyline points="18 15 12 9 6 15"/>,
+        arrowLeft: <><line x1="19" x2="5" y1="12" y2="12"/><polyline points="12 19 5 12 12 5"/></>,
+        home: <><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></>,
+        plus: <><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></>,
+        clock: <><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></>,
+        phone: <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>,
+        checkCircle: <><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></>,
+        xCircle: <><circle cx="12" cy="12" r="10"/><line x1="15" x2="9" y1="9" y2="15"/><line x1="9" x2="15" y1="9" y2="15"/></>,
+        alert: <><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></>,
+        edit: <><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></>,
+        trash: <><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></>,
+        dollar: <><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></>,
+        layers: <><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></>,
+        arrowDownRight: <><line x1="7" x2="17" y1="7" y2="17"/><polyline points="17 7 17 17 7 17"/></>,
+        arrowUpRight: <><line x1="7" x2="17" y1="17" y2="7"/><polyline points="7 7 17 7 17 17"/></>,
+        download: <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></>,
+        search: <><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/></>,
+        x: <><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></>,
+        check: <polyline points="20 6 9 17 4 12"/>
       };
-      setAppointments(prev => [...prev, newApp]);
-      setSelectedDate(newApp.date);
-      setExpandedAppointmentId(newApp.id);
-      showToast('Nueva cita agendada con éxito');
-    }
-    setAppointmentModalOpen(false);
-  };
-
-  const handleStatusChange = (id, newStatus) => {
-    setAppointments(prev =>
-      prev.map(app => (app.id === id ? { ...app, status: newStatus } : app))
-    );
-    showToast(`Cita marcada como ${newStatus}`);
-  };
-
-  const handleDeleteAppointment = (id) => {
-    setAppointments(prev => prev.filter(app => app.id !== id));
-    setDeleteConfirmId(null);
-    showToast('Cita eliminada de la agenda');
-  };
-
-  const formatReadableDate = (dateStr) => {
-    if (!dateStr) return '';
-    if (dateStr === TODAY_STR) return 'Hoy';
-    if (dateStr === TOMORROW_STR) return 'Mañana';
-    const [y, m, d] = dateStr.split('-').map(Number);
-    const dateObj = new Date(y, m - 1, d);
-    const dayName = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'][dateObj.getDay()];
-    return `${dayName} ${d} de ${MONTHS_ES[m - 1]}`;
-  };
-
-  // ==========================================================================
-  // ESTADOS Y LÓGICA DEL MÓDULO DE INVENTARIO Y MOVIMIENTOS
-  // ==========================================================================
-  const [inventorySearch, setInventorySearch] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('Todas');
-  const [onlyLowStock, setOnlyLowStock] = useState(false);
-  const [movementFilter, setMovementFilter] = useState('TODOS'); // TODOS, ENTRADA, SALIDA
-
-  // Modales de Inventario
-  const [newProductModalOpen, setNewProductModalOpen] = useState(false);
-  const [movementModalOpen, setMovementModalOpen] = useState(false);
-
-  const [newProductForm, setNewProductForm] = useState({
-    sku: '',
-    name: '',
-    category: INVENTORY_CATEGORIES[0],
-    stock: 1,
-    minStock: 2,
-    unitCost: 150
-  });
-
-  const [movementForm, setMovementForm] = useState({
-    itemId: INITIAL_INVENTORY[0]?.id || '',
-    type: 'ENTRADA',
-    quantity: 1,
-    unitCost: 0,
-    date: TODAY_STR,
-    notes: ''
-  });
-
-  // Métricas financieras del inventario
-  const inventoryMetrics = useMemo(() => {
-    const totalValue = inventory.reduce((acc, item) => acc + item.stock * item.unitCost, 0);
-    const totalItems = inventory.length;
-    const totalUnits = inventory.reduce((acc, item) => acc + item.stock, 0);
-    const lowStockItems = inventory.filter(item => item.stock <= item.minStock);
-
-    return {
-      totalValue,
-      totalItems,
-      totalUnits,
-      lowStockCount: lowStockItems.length
+      return (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+          {icons[name] || null}
+        </svg>
+      );
     };
-  }, [inventory]);
 
-  const filteredInventory = useMemo(() => {
-    return inventory.filter(item => {
-      const matchesSearch =
-        item.name.toLowerCase().includes(inventorySearch.toLowerCase()) ||
-        item.sku.toLowerCase().includes(inventorySearch.toLowerCase());
-      const matchesCategory = categoryFilter === 'Todas' || item.category === categoryFilter;
-      const matchesLowStock = !onlyLowStock || item.stock <= item.minStock;
-      return matchesSearch && matchesCategory && matchesLowStock;
-    });
-  }, [inventory, inventorySearch, categoryFilter, onlyLowStock]);
+    // ========================================================================
+    // DATOS INICIALES Y UTILIDADES
+    // ========================================================================
+    const getFormattedDate = (offsetDays = 0) => {
+      const date = new Date();
+      date.setDate(date.getDate() + offsetDays);
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    };
 
-  const filteredMovements = useMemo(() => {
-    return movements
-      .filter(m => movementFilter === 'TODOS' || m.type === movementFilter)
-      .sort((a, b) => b.date.localeCompare(a.date));
-  }, [movements, movementFilter]);
+    const TODAY_STR = getFormattedDate(0);
+    const TOMORROW_STR = getFormattedDate(1);
+    const DAY_AFTER_STR = getFormattedDate(2);
+    const YESTERDAY_STR = getFormattedDate(-1);
 
-  const openMovementModal = (type = 'ENTRADA', preselectedItem = null) => {
-    const targetItem = preselectedItem || inventory[0];
-    setMovementForm({
-      itemId: targetItem ? targetItem.id : '',
-      type,
-      quantity: 1,
-      unitCost: targetItem ? targetItem.unitCost : 0,
-      date: TODAY_STR,
-      notes: ''
-    });
-    setMovementModalOpen(true);
-  };
+    const INITIAL_APPOINTMENTS = [
+      { id: 'cit-101', date: TODAY_STR, time: '10:00', clientName: 'Valeria Mendoza', phone: '526871234567', service: 'Uñas Acrílicas Esculturales + Diseño', price: 550, status: 'Completada', notes: 'Tono nude con french blanco y pedrería sutil.' },
+      { id: 'cit-102', date: TODAY_STR, time: '13:30', clientName: 'Camila Rodríguez', phone: '526879876543', service: 'Soft Gel + Efecto Aurora', price: 420, status: 'Pendiente', notes: 'Trae referencia de Pinterest, largo mediano almendra.' },
+      { id: 'cit-103', date: TODAY_STR, time: '16:30', clientName: 'Sofía Castro', phone: '526875551234', service: 'Retoque Acrílico + Gelish', price: 350, status: 'Pendiente', notes: 'Revisar uña índice derecha.' },
+      { id: 'cit-104', date: TOMORROW_STR, time: '11:00', clientName: 'Mariana López', phone: '526874448899', service: 'Manicura Rusa + Nivelación Rubber', price: 380, status: 'Pendiente', notes: 'Color vino tinto clásico.' }
+    ];
 
-  const handleMovementItemChange = (itemId) => {
-    const selected = inventory.find(i => i.id === itemId);
-    setMovementForm(prev => ({
-      ...prev,
-      itemId,
-      unitCost: selected ? selected.unitCost : 0
-    }));
-  };
+    const INITIAL_INVENTORY = [
+      { id: 'inv-1', sku: 'MON-001', name: 'Monómero Bajo Aroma 8 oz', category: 'Acrílico', stock: 4, minStock: 2, unitCost: 320.00 },
+      { id: 'inv-2', sku: 'POL-002', name: 'Polímero Cristal Ultra Fine 4 oz', category: 'Acrílico', stock: 2, minStock: 3, unitCost: 240.00 },
+      { id: 'inv-3', sku: 'GEL-015', name: 'Base Coat & Top Coat Ruber Duo', category: 'Geles', stock: 6, minStock: 2, unitCost: 185.00 },
+      { id: 'inv-4', sku: 'LIM-100', name: 'Paquete Limas 100/180 Zebra (25 pzas)', category: 'Herramientas', stock: 1, minStock: 2, unitCost: 160.00 },
+      { id: 'inv-5', sku: 'TIP-500', name: 'Caja Tips Soft Gel Almendra (500 pzas)', category: 'Tips y Formas', stock: 5, minStock: 2, unitCost: 210.00 }
+    ];
 
-  const handleSaveMovement = (e) => {
-    e.preventDefault();
-    const targetItem = inventory.find(i => i.id === movementForm.itemId);
-    if (!targetItem) {
-      showToast('Selecciona un insumo válido', 'error');
-      return;
-    }
+    const INITIAL_MOVEMENTS = [
+      { id: 'mov-1', date: YESTERDAY_STR, itemId: 'inv-1', itemName: 'Monómero Bajo Aroma 8 oz', sku: 'MON-001', type: 'ENTRADA', quantity: 3, unitCost: 320.00, totalCost: 960.00, notes: 'Compra a proveedor oficial' },
+      { id: 'mov-2', date: TODAY_STR, itemId: 'inv-4', itemName: 'Paquete Limas 100/180 Zebra (25 pzas)', sku: 'LIM-100', type: 'SALIDA', quantity: 1, unitCost: 160.00, totalCost: 160.00, notes: 'Apertura de paquete para mesas' }
+    ];
 
-    const qty = Number(movementForm.quantity);
-    if (qty <= 0) {
-      showToast('La cantidad debe ser mayor a 0', 'error');
-      return;
-    }
+    const NAIL_SERVICES = ['Uñas Acrílicas Esculturales', 'Set Nuevo Acrílico con Tip', 'Retoque Acrílico + Gelish', 'Soft Gel + Diseño', 'Gelish en Uña Natural', 'Manicura Rusa + Nivelación Rubber', 'Retiro de Sistema + Manicura', 'Pedicure Spa + Gelish'];
+    const INVENTORY_CATEGORIES = ['Acrílico', 'Geles', 'Tips y Formas', 'Herramientas', 'Líquidos', 'Decoración', 'Desechables'];
+    const MONTHS_ES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    const DAYS_SHORT_ES = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
-    if (movementForm.type === 'SALIDA' && targetItem.stock < qty) {
-      showToast(`Stock insuficiente. Solo tienes ${targetItem.stock} disponibles.`, 'error');
-      return;
-    }
+    // ========================================================================
+    // COMPONENTE PRINCIPAL
+    // ========================================================================
+    function App() {
+      const [activeScreen, setActiveScreen] = useState('home');
 
-    const costPerUnit = Number(movementForm.unitCost) || targetItem.unitCost;
+      const [appointments, setAppointments] = useState(() => {
+        try { const s = localStorage.getItem('aura_nail_appointments'); return s ? JSON.parse(s) : INITIAL_APPOINTMENTS; } catch { return INITIAL_APPOINTMENTS; }
+      });
+      const [inventory, setInventory] = useState(() => {
+        try { const s = localStorage.getItem('aura_nail_inventory'); return s ? JSON.parse(s) : INITIAL_INVENTORY; } catch { return INITIAL_INVENTORY; }
+      });
+      const [movements, setMovements] = useState(() => {
+        try { const s = localStorage.getItem('aura_nail_movements'); return s ? JSON.parse(s) : INITIAL_MOVEMENTS; } catch { return INITIAL_MOVEMENTS; }
+      });
 
-    // Actualizar stock y costo promedio/último en inventario
-    setInventory(prev =>
-      prev.map(item => {
-        if (item.id !== targetItem.id) return item;
-        if (movementForm.type === 'ENTRADA') {
-          const newStock = item.stock + qty;
-          // Cálculo de costo promedio ponderado para mantener precisión contable
-          const currentTotalVal = item.stock * item.unitCost;
-          const incomingTotalVal = qty * costPerUnit;
-          const updatedUnitCost = newStock > 0 ? (currentTotalVal + incomingTotalVal) / newStock : costPerUnit;
-          return {
-            ...item,
-            stock: newStock,
-            unitCost: Number(updatedUnitCost.toFixed(2))
-          };
-        } else {
-          return {
-            ...item,
-            stock: item.stock - qty
-          };
+      useEffect(() => { try { localStorage.setItem('aura_nail_appointments', JSON.stringify(appointments)); } catch {} }, [appointments]);
+      useEffect(() => { try { localStorage.setItem('aura_nail_inventory', JSON.stringify(inventory)); } catch {} }, [inventory]);
+      useEffect(() => { try { localStorage.setItem('aura_nail_movements', JSON.stringify(movements)); } catch {} }, [movements]);
+
+      const [toast, setToast] = useState(null);
+      const showToast = (message, type = 'success') => {
+        setToast({ message, type });
+        setTimeout(() => setToast(null), 3500);
+      };
+
+      // --- Estados de Citas ---
+      const [selectedDate, setSelectedDate] = useState(TODAY_STR);
+      const [currentMonthDate, setCurrentMonthDate] = useState(() => {
+        const [y, m] = TODAY_STR.split('-').map(Number);
+        return new Date(y, m - 1, 1);
+      });
+      const [expandedAppointmentId, setExpandedAppointmentId] = useState('cit-102');
+      const [isDayAccordionOpen, setIsDayAccordionOpen] = useState(true);
+      const [appointmentModalOpen, setAppointmentModalOpen] = useState(false);
+      const [editingAppointment, setEditingAppointment] = useState(null);
+      const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+      const [appointmentForm, setAppointmentForm] = useState({
+        date: TODAY_STR, time: '12:00', clientName: '', phone: '', service: NAIL_SERVICES[0], price: 450, status: 'Pendiente', notes: ''
+      });
+
+      const calendarDays = useMemo(() => {
+        const year = currentMonthDate.getFullYear();
+        const month = currentMonthDate.getMonth();
+        const firstDayOfMonth = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const daysArray = [];
+        for (let i = 0; i < firstDayOfMonth; i++) daysArray.push(null);
+        for (let d = 1; d <= daysInMonth; d++) {
+          const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+          daysArray.push({ day: d, dateStr, appointments: appointments.filter(a => a.date === dateStr) });
         }
-      })
-    );
+        return daysArray;
+      }, [currentMonthDate, appointments]);
 
-    // Registrar movimiento en historial
-    const newMovement = {
-      id: `mov-${Date.now()}`,
-      date: movementForm.date,
-      itemId: targetItem.id,
-      itemName: targetItem.name,
-      sku: targetItem.sku,
-      type: movementForm.type,
-      quantity: qty,
-      unitCost: costPerUnit,
-      totalCost: Number((qty * costPerUnit).toFixed(2)),
-      notes: movementForm.notes || (movementForm.type === 'ENTRADA' ? 'Compra de reposición' : 'Consumo de salón')
-    };
+      const selectedDayAppointments = useMemo(() => {
+        return appointments.filter(a => a.date === selectedDate).sort((a, b) => a.time.localeCompare(b.time));
+      }, [appointments, selectedDate]);
 
-    setMovements(prev => [newMovement, ...prev]);
-    setMovementModalOpen(false);
-    showToast(
-      movementForm.type === 'ENTRADA'
-        ? `Entrada registrada: +${qty} ${targetItem.name}`
-        : `Salida registrada: -${qty} ${targetItem.name}`
-    );
-  };
+      const formatReadableDate = (dateStr) => {
+        if (!dateStr) return '';
+        if (dateStr === TODAY_STR) return 'Hoy';
+        if (dateStr === TOMORROW_STR) return 'Mañana';
+        const [y, m, d] = dateStr.split('-').map(Number);
+        const dateObj = new Date(y, m - 1, d);
+        const dayName = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'][dateObj.getDay()];
+        return `${dayName} ${d} de ${MONTHS_ES[m - 1]}`;
+      };
 
-  const handleAddNewProduct = (e) => {
-    e.preventDefault();
-    if (!newProductForm.name.trim() || !newProductForm.sku.trim()) {
-      showToast('Completa el código SKU y el nombre del insumo', 'error');
-      return;
-    }
+      const handleSaveAppointment = (e) => {
+        e.preventDefault();
+        if (!appointmentForm.clientName.trim()) return showToast('Ingresa el nombre de la clienta', 'error');
+        if (editingAppointment) {
+          setAppointments(prev => prev.map(item => item.id === editingAppointment.id ? { ...appointmentForm, id: item.id } : item));
+          showToast('Cita actualizada');
+        } else {
+          const newApp = { ...appointmentForm, id: `cit-${Date.now()}`, price: Number(appointmentForm.price) || 0 };
+          setAppointments(prev => [...prev, newApp]);
+          setSelectedDate(newApp.date);
+          setExpandedAppointmentId(newApp.id);
+          showToast('Cita agendada con éxito');
+        }
+        setAppointmentModalOpen(false);
+      };
 
-    const createdItem = {
-      id: `inv-${Date.now()}`,
-      sku: newProductForm.sku.toUpperCase(),
-      name: newProductForm.name.trim(),
-      category: newProductForm.category,
-      stock: Number(newProductForm.stock) || 0,
-      minStock: Number(newProductForm.minStock) || 1,
-      unitCost: Number(newProductForm.unitCost) || 0
-    };
+      // --- Estados de Inventario ---
+      const [inventorySearch, setInventorySearch] = useState('');
+      const [categoryFilter, setCategoryFilter] = useState('Todas');
+      const [onlyLowStock, setOnlyLowStock] = useState(false);
+      const [movementFilter, setMovementFilter] = useState('TODOS');
+      const [newProductModalOpen, setNewProductModalOpen] = useState(false);
+      const [movementModalOpen, setMovementModalOpen] = useState(false);
 
-    setInventory(prev => [createdItem, ...prev]);
+      const [newProductForm, setNewProductForm] = useState({ sku: '', name: '', category: INVENTORY_CATEGORIES[0], stock: 1, minStock: 2, unitCost: 150 });
+      const [movementForm, setMovementForm] = useState({ itemId: INITIAL_INVENTORY[0]?.id || '', type: 'ENTRADA', quantity: 1, unitCost: 0, date: TODAY_STR, notes: '' });
 
-    if (createdItem.stock > 0) {
-      setMovements(prev => [
-        {
-          id: `mov-${Date.now() + 1}`,
-          date: TODAY_STR,
-          itemId: createdItem.id,
-          itemName: createdItem.name,
-          sku: createdItem.sku,
-          type: 'ENTRADA',
-          quantity: createdItem.stock,
-          unitCost: createdItem.unitCost,
-          totalCost: createdItem.stock * createdItem.unitCost,
-          notes: 'Inventario inicial al registrar producto'
-        },
-        ...prev
-      ]);
-    }
+      const inventoryMetrics = useMemo(() => {
+        const totalValue = inventory.reduce((acc, item) => acc + item.stock * item.unitCost, 0);
+        const totalUnits = inventory.reduce((acc, item) => acc + item.stock, 0);
+        const lowStockCount = inventory.filter(item => item.stock <= item.minStock).length;
+        return { totalValue, totalItems: inventory.length, totalUnits, lowStockCount };
+      }, [inventory]);
 
-    setNewProductForm({
-      sku: '',
-      name: '',
-      category: INVENTORY_CATEGORIES[0],
-      stock: 1,
-      minStock: 2,
-      unitCost: 150
-    });
-    setNewProductModalOpen(false);
-    showToast('Insumo agregado al catálogo correctamente');
-  };
+      const filteredInventory = useMemo(() => {
+        return inventory.filter(item => {
+          const matchesSearch = item.name.toLowerCase().includes(inventorySearch.toLowerCase()) || item.sku.toLowerCase().includes(inventorySearch.toLowerCase());
+          const matchesCategory = categoryFilter === 'Todas' || item.category === categoryFilter;
+          const matchesLowStock = !onlyLowStock || item.stock <= item.minStock;
+          return matchesSearch && matchesCategory && matchesLowStock;
+        });
+      }, [inventory, inventorySearch, categoryFilter, onlyLowStock]);
 
-  // Exportar Respaldo CSV / JSON
-  const handleExportCSV = () => {
-    const headers = ['SKU,Insumo,Categoria,Stock Actual,Stock Minimo,Costo Unitario,Valor Total'];
-    const rows = inventory.map(
-      i =>
-        `"${i.sku}","${i.name}","${i.category}",${i.stock},${i.minStock},${i.unitCost.toFixed(2)},${(
-          i.stock * i.unitCost
-        ).toFixed(2)}`
-    );
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers, ...rows].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `Inventario_NailStudio_${TODAY_STR}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    showToast('Archivo CSV de inventario descargado');
-  };
+      const filteredMovements = useMemo(() => {
+        return movements.filter(m => movementFilter === 'TODOS' || m.type === movementFilter).sort((a, b) => b.date.localeCompare(a.date));
+      }, [movements, movementFilter]);
 
-  const handleExportJSON = () => {
-    const backupData = {
-      exportDate: new Date().toISOString(),
-      appointments,
-      inventory,
-      movements
-    };
-    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(backupData, null, 2));
-    const link = document.createElement('a');
-    link.setAttribute('href', dataStr);
-    link.setAttribute('download', `Respaldo_Completo_NailStudio_${TODAY_STR}.json`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    showToast('Respaldo completo JSON descargado');
-  };
+      const openMovementModal = (type = 'ENTRADA', preselectedItem = null) => {
+        const targetItem = preselectedItem || inventory[0];
+        setMovementForm({ itemId: targetItem ? targetItem.id : '', type, quantity: 1, unitCost: targetItem ? targetItem.unitCost : 0, date: TODAY_STR, notes: '' });
+        setMovementModalOpen(true);
+      };
 
-  // Resumen superior rápido
-  const todayAppointmentsCount = appointments.filter(a => a.date === TODAY_STR && a.status !== 'Cancelada').length;
-  const todayEstimatedIncome = appointments
-    .filter(a => a.date === TODAY_STR && a.status !== 'Cancelada')
-    .reduce((sum, a) => sum + Number(a.price || 0), 0);
+      const handleSaveMovement = (e) => {
+        e.preventDefault();
+        const targetItem = inventory.find(i => i.id === movementForm.itemId);
+        if (!targetItem) return showToast('Selecciona un insumo válido', 'error');
+        const qty = Number(movementForm.quantity);
+        if (qty <= 0) return showToast('La cantidad debe ser mayor a 0', 'error');
+        if (movementForm.type === 'SALIDA' && targetItem.stock < qty) return showToast(`Stock insuficiente (${targetItem.stock} disp.)`, 'error');
 
-  return (
-    <div className="min-h-screen bg-[#FDF8F6] text-stone-800 font-sans selection:bg-rose-200 selection:text-rose-950 flex flex-col">
-      {/* NOTIFICACIÓN FLOTANTE (TOAST) */}
-      {toast && (
-        <div className="fixed bottom-5 right-5 z-50 animate-bounce">
-          <div
-            className={`flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-xl border text-sm font-medium ${
-              toast.type === 'error'
-                ? 'bg-red-50 border-red-200 text-red-800'
-                : 'bg-stone-900 border-stone-700 text-rose-50'
-            }`}
-          >
-            {toast.type === 'error' ? (
-              <AlertTriangle className="w-5 h-5 text-red-500 shrink-0" />
-            ) : (
-              <Sparkles className="w-5 h-5 text-rose-300 shrink-0" />
-            )}
-            <span>{toast.message}</span>
-          </div>
-        </div>
-      )}
+        const costPerUnit = Number(movementForm.unitCost) || targetItem.unitCost;
+        setInventory(prev => prev.map(item => {
+          if (item.id !== targetItem.id) return item;
+          if (movementForm.type === 'ENTRADA') {
+            const newStock = item.stock + qty;
+            const updatedUnitCost = newStock > 0 ? ((item.stock * item.unitCost) + (qty * costPerUnit)) / newStock : costPerUnit;
+            return { ...item, stock: newStock, unitCost: Number(updatedUnitCost.toFixed(2)) };
+          }
+          return { ...item, stock: item.stock - qty };
+        }));
 
-      {activeScreen === 'home' ? (
-        /* ====================================================================
-           PANTALLA DE INICIO (HOME / MENÚ PRINCIPAL LIMPIO)
-           ==================================================================== */
-        <div className="flex-1 flex flex-col items-center justify-center px-4 py-12 relative overflow-hidden">
-          {/* Decoración sutil de fondo */}
-          <div className="absolute -top-24 -left-24 w-80 h-80 rounded-full bg-rose-200/30 blur-3xl pointer-events-none" />
-          <div className="absolute -bottom-24 -right-24 w-96 h-96 rounded-full bg-rose-300/20 blur-3xl pointer-events-none" />
+        setMovements(prev => [{
+          id: `mov-${Date.now()}`, date: movementForm.date, itemId: targetItem.id, itemName: targetItem.name, sku: targetItem.sku,
+          type: movementForm.type, quantity: qty, unitCost: costPerUnit, totalCost: Number((qty * costPerUnit).toFixed(2)),
+          notes: movementForm.notes || (movementForm.type === 'ENTRADA' ? 'Compra de reposición' : 'Consumo de salón')
+        }, ...prev]);
 
-          {/* Encabezado y Logo del Salón */}
-          <div className="text-center max-w-md mx-auto mb-10 relative z-10">
-            <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-rose-300 via-rose-500 to-rose-800 flex items-center justify-center text-white shadow-xl shadow-rose-200/80 mx-auto mb-5">
-              <Sparkles className="w-10 h-10" />
+        setMovementModalOpen(false);
+        showToast(`${movementForm.type === 'ENTRADA' ? 'Entrada' : 'Salida'} registrada correctamente`);
+      };
+
+      const handleAddNewProduct = (e) => {
+        e.preventDefault();
+        if (!newProductForm.name.trim() || !newProductForm.sku.trim()) return showToast('Completa SKU y nombre', 'error');
+        const createdItem = {
+          id: `inv-${Date.now()}`, sku: newProductForm.sku.toUpperCase(), name: newProductForm.name.trim(),
+          category: newProductForm.category, stock: Number(newProductForm.stock) || 0,
+          minStock: Number(newProductForm.minStock) || 1, unitCost: Number(newProductForm.unitCost) || 0
+        };
+        setInventory(prev => [createdItem, ...prev]);
+        if (createdItem.stock > 0) {
+          setMovements(prev => [{
+            id: `mov-${Date.now() + 1}`, date: TODAY_STR, itemId: createdItem.id, itemName: createdItem.name, sku: createdItem.sku,
+            type: 'ENTRADA', quantity: createdItem.stock, unitCost: createdItem.unitCost, totalCost: createdItem.stock * createdItem.unitCost, notes: 'Inventario inicial'
+          }, ...prev]);
+        }
+        setNewProductForm({ sku: '', name: '', category: INVENTORY_CATEGORIES[0], stock: 1, minStock: 2, unitCost: 150 });
+        setNewProductModalOpen(false);
+        showToast('Insumo agregado al catálogo');
+      };
+
+      const handleExportCSV = () => {
+        const headers = ['SKU,Insumo,Categoria,Stock Actual,Stock Minimo,Costo Unitario,Valor Total'];
+        const rows = inventory.map(i => `"${i.sku}","${i.name}","${i.category}",${i.stock},${i.minStock},${i.unitCost.toFixed(2)},${(i.stock * i.unitCost).toFixed(2)}`);
+        const link = document.createElement('a');
+        link.href = encodeURI('data:text/csv;charset=utf-8,' + [headers, ...rows].join('\n'));
+        link.download = `Inventario_NailStudio_${TODAY_STR}.csv`;
+        link.click();
+        showToast('Inventario descargado en CSV');
+      };
+
+      const todayAppointmentsCount = appointments.filter(a => a.date === TODAY_STR && a.status !== 'Cancelada').length;
+      const todayEstimatedIncome = appointments.filter(a => a.date === TODAY_STR && a.status !== 'Cancelada').reduce((sum, a) => sum + Number(a.price || 0), 0);
+
+      return (
+        <div className="min-h-screen flex flex-col">
+          {toast && (
+            <div className="fixed bottom-5 right-5 z-50">
+              <div className={`flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-xl border text-sm font-medium ${toast.type === 'error' ? 'bg-red-50 border-red-200 text-red-800' : 'bg-stone-900 border-stone-700 text-rose-50'}`}>
+                <Icon name={toast.type === 'error' ? 'alert' : 'sparkles'} className="w-5 h-5 text-rose-300" />
+                <span>{toast.message}</span>
+              </div>
             </div>
-            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-stone-900">
-              Aura <span className="font-light text-rose-700">Nail Studio</span>
-            </h1>
-            <p className="text-sm text-stone-500 mt-2">
-              Selecciona el módulo al que deseas ingresar hoy
-            </p>
-          </div>
+          )}
 
-          {/* Dos Tarjetas Interactivas Grandes */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-3xl relative z-10">
-            {/* Tarjeta 1: Citas */}
-            <button
-              onClick={() => setActiveScreen('citas')}
-              className="group text-left bg-white hover:bg-gradient-to-br hover:from-white hover:to-rose-50/80 rounded-3xl p-7 sm:p-8 border border-rose-100 hover:border-rose-300 shadow-md hover:shadow-xl hover:shadow-rose-200/50 transition-all duration-300 flex flex-col justify-between min-h-[240px]"
-            >
-              <div className="flex items-start justify-between w-full">
-                <div className="w-14 h-14 rounded-2xl bg-rose-100 group-hover:bg-rose-700 text-rose-700 group-hover:text-white flex items-center justify-center transition-colors duration-300 shadow-sm">
-                  <CalendarIcon className="w-7 h-7" />
+          {activeScreen === 'home' ? (
+            /* PANTALLA DE INICIO LIMPIA */
+            <div className="flex-1 flex flex-col items-center justify-center px-4 py-12 relative overflow-hidden">
+              <div className="text-center max-w-md mx-auto mb-10">
+                <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-rose-300 via-rose-500 to-rose-800 flex items-center justify-center text-white shadow-xl mx-auto mb-5">
+                  <Icon name="sparkles" className="w-10 h-10" />
                 </div>
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-900">
-                  {todayAppointmentsCount} {todayAppointmentsCount === 1 ? 'cita hoy' : 'citas hoy'}
-                </span>
+                <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-stone-900">
+                  Aura <span className="font-light text-rose-700">Nail Studio</span>
+                </h1>
+                <p className="text-sm text-stone-500 mt-2">Selecciona el módulo al que deseas ingresar</p>
               </div>
 
-              <div className="mt-6">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-2xl font-bold text-stone-900 group-hover:text-rose-900 transition-colors">
-                    Citas
-                  </h2>
-                  <ChevronRight className="w-6 h-6 text-rose-400 group-hover:translate-x-1.5 group-hover:text-rose-700 transition-all" />
-                </div>
-                <p className="text-sm text-stone-500 mt-2 leading-relaxed">
-                  Agenda de clientas, calendario mensual y recordatorios diarios con envío directo a WhatsApp.
-                </p>
-              </div>
-            </button>
-
-            {/* Tarjeta 2: Inventario */}
-            <button
-              onClick={() => {
-                setOnlyLowStock(false);
-                setActiveScreen('inventario');
-              }}
-              className="group text-left bg-white hover:bg-gradient-to-br hover:from-white hover:to-rose-50/80 rounded-3xl p-7 sm:p-8 border border-rose-100 hover:border-rose-300 shadow-md hover:shadow-xl hover:shadow-rose-200/50 transition-all duration-300 flex flex-col justify-between min-h-[240px]"
-            >
-              <div className="flex items-start justify-between w-full">
-                <div className="w-14 h-14 rounded-2xl bg-stone-900 group-hover:bg-rose-700 text-rose-200 group-hover:text-white flex items-center justify-center transition-colors duration-300 shadow-sm">
-                  <Package className="w-7 h-7" />
-                </div>
-                <div className="flex flex-col items-end gap-1">
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-stone-100 text-stone-800">
-                    {inventoryMetrics.totalItems} insumos
-                  </span>
-                  {inventoryMetrics.lowStockCount > 0 && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800">
-                      <AlertTriangle className="w-3 h-3" /> {inventoryMetrics.lowStockCount} stock bajo
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-3xl">
+                <button onClick={() => setActiveScreen('citas')} className="group text-left bg-white hover:bg-rose-50/60 rounded-3xl p-8 border border-rose-100 hover:border-rose-300 shadow-md hover:shadow-xl transition-all flex flex-col justify-between min-h-[230px]">
+                  <div className="flex items-start justify-between w-full">
+                    <div className="w-14 h-14 rounded-2xl bg-rose-100 group-hover:bg-rose-700 text-rose-700 group-hover:text-white flex items-center justify-center transition-colors">
+                      <Icon name="calendar" className="w-7 h-7" />
+                    </div>
+                    <span className="px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-900">
+                      {todayAppointmentsCount} {todayAppointmentsCount === 1 ? 'cita hoy' : 'citas hoy'}
                     </span>
-                  )}
-                </div>
-              </div>
-
-              <div className="mt-6">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-2xl font-bold text-stone-900 group-hover:text-rose-900 transition-colors">
-                    Inventario
-                  </h2>
-                  <ChevronRight className="w-6 h-6 text-rose-400 group-hover:translate-x-1.5 group-hover:text-rose-700 transition-all" />
-                </div>
-                <p className="text-sm text-stone-500 mt-2 leading-relaxed">
-                  Control de stock, registro de entradas y salidas, costos unitarios y valor total de productos.
-                </p>
-              </div>
-            </button>
-          </div>
-        </div>
-      ) : (
-        /* ====================================================================
-           PANTALLAS INDEPENDIENTES DE MÓDULOS (CITAS O INVENTARIO)
-           ==================================================================== */
-        <>
-          {/* BARRA DE NAVEGACIÓN SUPERIOR CON BOTÓN VOLVER AL INICIO */}
-          <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-rose-100 shadow-sm">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="flex flex-wrap items-center justify-between py-3.5 gap-3">
-                {/* Botón prominente Volver al Inicio + Título de la pantalla actual */}
-                <div className="flex items-center gap-3 sm:gap-4">
-                  <button
-                    onClick={() => setActiveScreen('home')}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-rose-50 hover:bg-rose-100 active:scale-95 text-rose-900 border border-rose-200/80 text-xs sm:text-sm font-bold transition-all shadow-sm"
-                  >
-                    <ArrowLeft className="w-4 h-4 text-rose-700" />
-                    <Home className="w-4 h-4 text-rose-700 hidden sm:inline" />
-                    <span>Volver al Inicio</span>
-                  </button>
-
-                  <div className="h-6 w-px bg-rose-100 hidden sm:block" />
-
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-rose-400 to-rose-700 flex items-center justify-center text-white shadow-sm">
-                      {activeScreen === 'citas' ? (
-                        <CalendarIcon className="w-5 h-5" />
-                      ) : (
-                        <Package className="w-5 h-5" />
-                      )}
-                    </div>
-                    <div>
-                      <h1 className="text-base sm:text-lg font-bold tracking-tight text-stone-900">
-                        {activeScreen === 'citas' ? 'Módulo de Citas' : 'Módulo de Inventario'}
-                      </h1>
-                      <p className="text-[11px] text-stone-500 hidden sm:block">
-                        Aura Nail Studio
-                      </p>
-                    </div>
                   </div>
-                </div>
+                  <div className="mt-6">
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-2xl font-bold text-stone-900">Citas</h2>
+                      <Icon name="chevronRight" className="w-6 h-6 text-rose-400 group-hover:translate-x-1 transition-transform" />
+                    </div>
+                    <p className="text-sm text-stone-500 mt-2">Calendario de clientas y lista desplegable diaria con recordatorios por WhatsApp.</p>
+                  </div>
+                </button>
 
-                {/* Acceso rápido directo al otro módulo */}
-                <div className="flex items-center gap-2">
-                  {activeScreen === 'citas' ? (
-                    <button
-                      onClick={() => setActiveScreen('inventario')}
-                      className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-stone-900 hover:bg-stone-800 text-white text-xs font-semibold transition-all shadow-sm"
-                    >
-                      <Package className="w-3.5 h-3.5 text-rose-300" />
-                      <span>Ir a Inventario</span>
+                <button onClick={() => { setOnlyLowStock(false); setActiveScreen('inventario'); }} className="group text-left bg-white hover:bg-rose-50/60 rounded-3xl p-8 border border-rose-100 hover:border-rose-300 shadow-md hover:shadow-xl transition-all flex flex-col justify-between min-h-[230px]">
+                  <div className="flex items-start justify-between w-full">
+                    <div className="w-14 h-14 rounded-2xl bg-stone-900 group-hover:bg-rose-700 text-rose-200 group-hover:text-white flex items-center justify-center transition-colors">
+                      <Icon name="package" className="w-7 h-7" />
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      <span className="px-3 py-1 rounded-full text-xs font-bold bg-stone-100 text-stone-800">{inventoryMetrics.totalItems} insumos</span>
                       {inventoryMetrics.lowStockCount > 0 && (
-                        <span className="px-1.5 py-0.5 text-[10px] rounded-full bg-amber-400 text-stone-950 font-bold">
-                          {inventoryMetrics.lowStockCount}
-                        </span>
+                        <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800">{inventoryMetrics.lowStockCount} stock bajo</span>
                       )}
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => setActiveScreen('citas')}
-                      className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-rose-800 hover:bg-rose-900 text-white text-xs font-semibold transition-all shadow-sm"
-                    >
-                      <CalendarIcon className="w-3.5 h-3.5 text-rose-200" />
-                      <span>Ir a Citas</span>
-                      <span className="px-1.5 py-0.5 text-[10px] rounded-full bg-white/20 text-white font-bold">
-                        {todayAppointmentsCount} hoy
-                      </span>
-                    </button>
-                  )}
-                </div>
+                    </div>
+                  </div>
+                  <div className="mt-6">
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-2xl font-bold text-stone-900">Inventario</h2>
+                      <Icon name="chevronRight" className="w-6 h-6 text-rose-400 group-hover:translate-x-1 transition-transform" />
+                    </div>
+                    <p className="text-sm text-stone-500 mt-2">Registro de entradas y salidas de insumos, control de costos y alertas de surtido.</p>
+                  </div>
+                </button>
               </div>
             </div>
-          </header>
-
-          {/* RESUMEN EJECUTIVO SUPERIOR (KPIs) */}
-          <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pt-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="bg-white rounded-2xl p-4 border border-rose-100/80 shadow-sm flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-stone-500 uppercase tracking-wider">Citas de Hoy</p>
-                  <p className="text-2xl font-bold text-stone-900 mt-1">{todayAppointmentsCount} clientas</p>
-                  <p className="text-xs text-rose-600 mt-0.5">Ingreso est. ${todayEstimatedIncome.toLocaleString()}</p>
+          ) : (
+            /* PANTALLA DE MÓDULO ACTIVO */
+            <>
+              <header className="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-rose-100 shadow-sm">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <button onClick={() => setActiveScreen('home')} className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-900 border border-rose-200 text-xs sm:text-sm font-bold transition-all">
+                      <Icon name="arrowLeft" className="w-4 h-4 text-rose-700" />
+                      <span>Volver al Inicio</span>
+                    </button>
+                    <h1 className="text-base sm:text-lg font-bold text-stone-900">
+                      {activeScreen === 'citas' ? 'Módulo de Citas' : 'Módulo de Inventario'}
+                    </h1>
+                  </div>
+                  <button onClick={() => setActiveScreen(activeScreen === 'citas' ? 'inventario' : 'citas')} className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-stone-900 hover:bg-stone-800 text-white text-xs font-semibold">
+                    <Icon name={activeScreen === 'citas' ? 'package' : 'calendar'} className="w-4 h-4 text-rose-300" />
+                    <span>{activeScreen === 'citas' ? 'Ir a Inventario' : 'Ir a Citas'}</span>
+                  </button>
                 </div>
-                <div className="w-12 h-12 rounded-2xl bg-rose-50 flex items-center justify-center text-rose-600">
-                  <CalendarIcon className="w-6 h-6" />
+              </header>
+
+              {/* KPIs Superiores */}
+              <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-white rounded-2xl p-4 border border-rose-100 shadow-sm flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-stone-500 uppercase">Citas de Hoy</p>
+                    <p className="text-2xl font-bold text-stone-900 mt-1">{todayAppointmentsCount} clientas</p>
+                    <p className="text-xs text-rose-600">Est. ${todayEstimatedIncome.toLocaleString()}</p>
+                  </div>
+                  <div className="w-11 h-11 rounded-2xl bg-rose-50 flex items-center justify-center text-rose-600"><Icon name="calendar" /></div>
+                </div>
+                <div className="bg-white rounded-2xl p-4 border border-rose-100 shadow-sm flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-stone-500 uppercase">Valor Inventario</p>
+                    <p className="text-2xl font-bold text-stone-900 mt-1">${inventoryMetrics.totalValue.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</p>
+                    <p className="text-xs text-stone-500">{inventoryMetrics.totalUnits} unidades</p>
+                  </div>
+                  <div className="w-11 h-11 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600"><Icon name="dollar" /></div>
+                </div>
+                <div className="bg-white rounded-2xl p-4 border border-rose-100 shadow-sm flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-stone-500 uppercase">Insumos</p>
+                    <p className="text-2xl font-bold text-stone-900 mt-1">{inventoryMetrics.totalItems} productos</p>
+                    <p className="text-xs text-stone-500">En catálogo</p>
+                  </div>
+                  <div className="w-11 h-11 rounded-2xl bg-purple-50 flex items-center justify-center text-purple-600"><Icon name="layers" /></div>
+                </div>
+                <div onClick={() => { setActiveScreen('inventario'); setOnlyLowStock(true); }} className="cursor-pointer bg-white rounded-2xl p-4 border border-rose-100 shadow-sm hover:border-amber-300 flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-stone-500 uppercase">Stock Bajo</p>
+                    <p className="text-2xl font-bold text-amber-600 mt-1">{inventoryMetrics.lowStockCount} insumos</p>
+                    <p className="text-xs text-amber-700 underline">Ver alertas</p>
+                  </div>
+                  <div className="w-11 h-11 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600"><Icon name="alert" /></div>
                 </div>
               </div>
 
-              <div className="bg-white rounded-2xl p-4 border border-rose-100/80 shadow-sm flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-stone-500 uppercase tracking-wider">Valor Inventario</p>
-                  <p className="text-2xl font-bold text-stone-900 mt-1">
-                    ${inventoryMetrics.totalValue.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </p>
-                  <p className="text-xs text-stone-500 mt-0.5">{inventoryMetrics.totalUnits} unidades en stock</p>
-                </div>
-                <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600">
-                  <DollarSign className="w-6 h-6" />
-                </div>
-              </div>
-
-              <div className="bg-white rounded-2xl p-4 border border-rose-100/80 shadow-sm flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-stone-500 uppercase tracking-wider">Insumos Registrados</p>
-                  <p className="text-2xl font-bold text-stone-900 mt-1">{inventoryMetrics.totalItems} productos</p>
-                  <p className="text-xs text-stone-500 mt-0.5">{INVENTORY_CATEGORIES.length} categorías activas</p>
-                </div>
-                <div className="w-12 h-12 rounded-2xl bg-purple-50 flex items-center justify-center text-purple-600">
-                  <Layers className="w-6 h-6" />
-                </div>
-              </div>
-
-              <div
-                onClick={() => {
-                  setActiveScreen('inventario');
-                  setOnlyLowStock(true);
-                }}
-                className="cursor-pointer bg-white rounded-2xl p-4 border border-rose-100/80 shadow-sm hover:border-amber-300 transition-all flex items-center justify-between"
-              >
-                <div>
-                  <p className="text-xs font-medium text-stone-500 uppercase tracking-wider">Alertas Stock Bajo</p>
-                  <p className="text-2xl font-bold text-amber-600 mt-1">{inventoryMetrics.lowStockCount} insumos</p>
-                  <p className="text-xs text-amber-700 mt-0.5 underline">Clic para revisar surtido</p>
-                </div>
-                <div className="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600">
-                  <AlertTriangle className="w-6 h-6" />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* CONTENIDO PRINCIPAL SEGÚN MÓDULO ACTIVO */}
-          <main className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6">
-            {activeScreen === 'citas' ? (
-              /* ==============================================================
-                 MÓDULO 1: CITAS Y CALENDARIO INTERACTIVO
-                 ============================================================== */
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-                {/* COLUMNA IZQUIERDA: CALENDARIO MENSUAL (7 columnas) */}
-                <div className="lg:col-span-7 bg-white rounded-3xl border border-rose-100 shadow-sm overflow-hidden">
-                  <div className="p-5 sm:p-6 border-b border-rose-100 flex flex-wrap items-center justify-between gap-4 bg-gradient-to-r from-rose-50/60 to-white">
-                    <div>
-                      <h2 className="text-lg font-bold text-stone-900 capitalize">
-                        {MONTHS_ES[currentMonthDate.getMonth()]} {currentMonthDate.getFullYear()}
-                      </h2>
-                      <p className="text-xs text-stone-500">Selecciona un día para ver o agendar clientas</p>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => {
-                          setSelectedDate(TODAY_STR);
-                          const [y, m] = TODAY_STR.split('-').map(Number);
-                          setCurrentMonthDate(new Date(y, m - 1, 1));
-                        }}
-                        className="px-3 py-1.5 text-xs font-semibold rounded-xl bg-rose-50 text-rose-800 hover:bg-rose-100 transition-colors"
-                      >
-                        Ir a Hoy
-                      </button>
-                      <div className="flex items-center bg-stone-100 rounded-xl p-1">
-                        <button
-                          onClick={handlePrevMonth}
-                          className="p-1.5 rounded-lg hover:bg-white text-stone-700 transition-all"
-                          aria-label="Mes anterior"
-                        >
-                          <ChevronLeft className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={handleNextMonth}
-                          className="p-1.5 rounded-lg hover:bg-white text-stone-700 transition-all"
-                          aria-label="Mes siguiente"
-                        >
-                          <ChevronRight className="w-4 h-4" />
-                        </button>
+              <main className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6">
+                {activeScreen === 'citas' ? (
+                  /* MÓDULO CITAS */
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                    <div className="lg:col-span-7 bg-white rounded-3xl border border-rose-100 shadow-sm overflow-hidden">
+                      <div className="p-5 border-b border-rose-100 flex flex-wrap items-center justify-between gap-4 bg-rose-50/40">
+                        <div>
+                          <h2 className="text-lg font-bold text-stone-900">{MONTHS_ES[currentMonthDate.getMonth()]} {currentMonthDate.getFullYear()}</h2>
+                          <p className="text-xs text-stone-500">Selecciona un día para desplegar sus citas</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button onClick={() => { setSelectedDate(TODAY_STR); const [y, m] = TODAY_STR.split('-').map(Number); setCurrentMonthDate(new Date(y, m - 1, 1)); }} className="px-3 py-1.5 text-xs font-semibold rounded-xl bg-rose-100 text-rose-900">Hoy</button>
+                          <button onClick={() => setCurrentMonthDate(p => new Date(p.getFullYear(), p.getMonth() - 1, 1))} className="p-1.5 rounded-lg bg-stone-100 hover:bg-stone-200"><Icon name="chevronLeft" className="w-4 h-4" /></button>
+                          <button onClick={() => setCurrentMonthDate(p => new Date(p.getFullYear(), p.getMonth() + 1, 1))} className="p-1.5 rounded-lg bg-stone-100 hover:bg-stone-200"><Icon name="chevronRight" className="w-4 h-4" /></button>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-
-                  {/* Encabezado Días de la Semana */}
-                  <div className="grid grid-cols-7 bg-rose-50/30 border-b border-rose-100/60">
-                    {DAYS_SHORT_ES.map(day => (
-                      <div key={day} className="py-2.5 text-center text-xs font-semibold text-stone-500 uppercase">
-                        {day}
+                      <div className="grid grid-cols-7 bg-rose-50/30 border-b border-rose-100">
+                        {DAYS_SHORT_ES.map(d => <div key={d} className="py-2 text-center text-xs font-semibold text-stone-500 uppercase">{d}</div>)}
                       </div>
-                    ))}
-                  </div>
-
-                  {/* Cuadrícula de Días */}
-                  <div className="grid grid-cols-7 p-2 sm:p-3 gap-1.5 sm:gap-2">
-                    {calendarDays.map((cell, idx) => {
-                      if (!cell) {
-                        return <div key={`empty-${idx}`} className="h-16 sm:h-20 rounded-2xl bg-stone-50/40" />;
-                      }
-
-                      const isSelected = cell.dateStr === selectedDate;
-                      const isToday = cell.dateStr === TODAY_STR;
-                      const activeApps = cell.appointments.filter(a => a.status !== 'Cancelada');
-                      const hasAppointments = activeApps.length > 0;
-
-                      return (
-                        <button
-                          key={cell.dateStr}
-                          onClick={() => {
-                            setSelectedDate(cell.dateStr);
-                            setIsDayAccordionOpen(true);
-                          }}
-                          className={`h-16 sm:h-20 p-1.5 sm:p-2 rounded-2xl border text-left flex flex-col justify-between transition-all relative ${
-                            isSelected
-                              ? 'bg-gradient-to-br from-rose-700 to-rose-900 text-white border-rose-800 shadow-md shadow-rose-200 scale-[1.02]'
-                              : isToday
-                              ? 'bg-rose-50/90 border-rose-300 text-rose-950'
-                              : 'bg-white border-stone-100 hover:border-rose-200 hover:bg-rose-50/30 text-stone-800'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between w-full">
-                            <span
-                              className={`text-xs sm:text-sm font-bold ${
-                                isSelected ? 'text-white' : isToday ? 'text-rose-700' : 'text-stone-700'
-                              }`}
-                            >
-                              {cell.day}
-                            </span>
-                            {isToday && !isSelected && (
-                              <span className="w-2 h-2 rounded-full bg-rose-500" title="Hoy" />
-                            )}
-                          </div>
-
-                          {hasAppointments && (
-                            <div className="w-full">
-                              <div
-                                className={`text-[10px] sm:text-xs font-semibold px-1.5 py-0.5 rounded-lg truncate ${
-                                  isSelected
-                                    ? 'bg-white/20 text-white'
-                                    : 'bg-rose-100/90 text-rose-900'
-                                }`}
-                              >
-                                {activeApps.length} {activeApps.length === 1 ? 'cita' : 'citas'}
-                              </div>
-                              {/* Puntos indicadores */}
-                              <div className="flex gap-1 mt-1 px-0.5">
-                                {activeApps.slice(0, 4).map(a => (
-                                  <span
-                                    key={a.id}
-                                    className={`w-1.5 h-1.5 rounded-full ${
-                                      isSelected
-                                        ? 'bg-rose-200'
-                                        : a.status === 'Completada'
-                                        ? 'bg-emerald-500'
-                                        : 'bg-rose-500'
-                                    }`}
-                                  />
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* Leyenda inferior del calendario */}
-                  <div className="px-6 py-3 bg-stone-50/70 border-t border-rose-100/60 flex flex-wrap items-center justify-between gap-3 text-xs text-stone-500">
-                    <div className="flex items-center gap-4">
-                      <span className="flex items-center gap-1.5">
-                        <span className="w-2.5 h-2.5 rounded-full bg-rose-500" /> Pendiente
-                      </span>
-                      <span className="flex items-center gap-1.5">
-                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> Completada
-                      </span>
-                    </div>
-                    <span>Haz clic en cualquier día para desplegar sus citas</span>
-                  </div>
-                </div>
-
-                {/* COLUMNA DERECHA: AGENDA DEL DÍA / LISTA DESPLEGABLE (5 columnas) */}
-                <div className="lg:col-span-5 space-y-5">
-                  {/* Tarjeta Principal de Recordatorio Diario */}
-                  <div className="bg-white rounded-3xl border border-rose-100 shadow-sm overflow-hidden">
-                    <div className="p-5 bg-gradient-to-r from-rose-900 to-rose-800 text-white flex items-center justify-between gap-3">
-                      <div>
-                        <span className="text-xs uppercase tracking-widest text-rose-200 font-semibold">
-                          Recordatorio Diario
-                        </span>
-                        <h3 className="text-lg font-bold mt-0.5 capitalize">
-                          {formatReadableDate(selectedDate)}
-                        </h3>
-                      </div>
-
-                      <button
-                        onClick={() => openNewAppointmentModal(selectedDate)}
-                        className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white text-rose-900 hover:bg-rose-50 font-semibold text-xs shadow-sm transition-all"
-                      >
-                        <Plus className="w-4 h-4" />
-                        <span>Nueva Cita</span>
-                      </button>
-                    </div>
-
-                    {/* Selector rápido de fecha y botón desplegable */}
-                    <div className="px-5 py-3 bg-rose-50/60 border-b border-rose-100 flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <label htmlFor="quick-date" className="text-xs font-medium text-stone-600">
-                          Ir a fecha:
-                        </label>
-                        <input
-                          id="quick-date"
-                          type="date"
-                          value={selectedDate}
-                          onChange={(e) => {
-                            if (e.target.value) {
-                              setSelectedDate(e.target.value);
-                              const [y, m] = e.target.value.split('-').map(Number);
-                              setCurrentMonthDate(new Date(y, m - 1, 1));
-                              setIsDayAccordionOpen(true);
-                            }
-                          }}
-                          className="text-xs font-semibold bg-white border border-rose-200 rounded-lg px-2.5 py-1.5 text-stone-800 focus:outline-none focus:ring-2 focus:ring-rose-400"
-                        />
-                      </div>
-
-                      <button
-                        onClick={() => setIsDayAccordionOpen(!isDayAccordionOpen)}
-                        className="flex items-center gap-1 text-xs font-semibold text-rose-800 hover:text-rose-950 px-2.5 py-1.5 rounded-lg hover:bg-rose-100/70 transition-colors"
-                      >
-                        <span>{isDayAccordionOpen ? 'Ocultar lista' : 'Desplegar lista'}</span>
-                        {isDayAccordionOpen ? (
-                          <ChevronUp className="w-4 h-4" />
-                        ) : (
-                          <ChevronDown className="w-4 h-4" />
-                        )}
-                      </button>
-                    </div>
-
-                    {/* Lista Desplegable de Clientas Programadas */}
-                    {isDayAccordionOpen && (
-                      <div className="p-4 sm:p-5 space-y-3 max-h-[520px] overflow-y-auto">
-                        {selectedDayAppointments.length === 0 ? (
-                          <div className="text-center py-10 px-4">
-                            <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-400 flex items-center justify-center mx-auto mb-3">
-                              <Sparkles className="w-6 h-6" />
-                            </div>
-                            <p className="text-sm font-semibold text-stone-700">Día libre de citas</p>
-                            <p className="text-xs text-stone-500 mt-1">
-                              No hay clientas programadas para esta fecha.
-                            </p>
-                            <button
-                              onClick={() => openNewAppointmentModal(selectedDate)}
-                              className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-rose-100 text-rose-900 hover:bg-rose-200 text-xs font-semibold transition-colors"
-                            >
-                              <Plus className="w-4 h-4" /> Agendar primera clienta
+                      <div className="grid grid-cols-7 p-3 gap-1.5">
+                        {calendarDays.map((cell, idx) => {
+                          if (!cell) return <div key={`e-${idx}`} className="h-16 sm:h-20 rounded-2xl bg-stone-50/40" />;
+                          const isSelected = cell.dateStr === selectedDate;
+                          const activeApps = cell.appointments.filter(a => a.status !== 'Cancelada');
+                          return (
+                            <button key={cell.dateStr} onClick={() => { setSelectedDate(cell.dateStr); setIsDayAccordionOpen(true); }}
+                              className={`h-16 sm:h-20 p-2 rounded-2xl border text-left flex flex-col justify-between transition-all ${isSelected ? 'bg-rose-800 text-white border-rose-900 shadow-md' : cell.dateStr === TODAY_STR ? 'bg-rose-50 border-rose-300' : 'bg-white border-stone-100 hover:border-rose-200'}`}>
+                              <span className="text-xs sm:text-sm font-bold">{cell.day}</span>
+                              {activeApps.length > 0 && (
+                                <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-lg truncate ${isSelected ? 'bg-white/20 text-white' : 'bg-rose-100 text-rose-900'}`}>
+                                  {activeApps.length} {activeApps.length === 1 ? 'cita' : 'citas'}
+                                </span>
+                              )}
                             </button>
-                          </div>
-                        ) : (
-                          selectedDayAppointments.map((app) => {
-                            const isExpanded = expandedAppointmentId === app.id;
-                            const cleanPhone = app.phone.replace(/\D/g, '');
-                            const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(
-                              `Hola ${app.clientName}, te recordamos tu cita en Aura Nail Studio hoy a las ${app.time} hrs para ${app.service}. ¡Te esperamos!`
-                            )}`;
+                          );
+                        })}
+                      </div>
+                    </div>
 
+                    {/* Lista desplegable por día */}
+                    <div className="lg:col-span-5 bg-white rounded-3xl border border-rose-100 shadow-sm overflow-hidden">
+                      <div className="p-5 bg-rose-900 text-white flex items-center justify-between">
+                        <div>
+                          <span className="text-xs uppercase text-rose-200 font-semibold">Recordatorio Diario</span>
+                          <h3 className="text-lg font-bold">{formatReadableDate(selectedDate)}</h3>
+                        </div>
+                        <button onClick={() => { setEditingAppointment(null); setAppointmentForm({ date: selectedDate, time: '11:00', clientName: '', phone: '', service: NAIL_SERVICES[0], price: 450, status: 'Pendiente', notes: '' }); setAppointmentModalOpen(true); }}
+                          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white text-rose-900 font-bold text-xs">
+                          <Icon name="plus" className="w-4 h-4" /><span>Nueva Cita</span>
+                        </button>
+                      </div>
+
+                      <div className="px-5 py-3 bg-rose-50/60 border-b border-rose-100 flex items-center justify-between">
+                        <input type="date" value={selectedDate} onChange={(e) => { if (e.target.value) { setSelectedDate(e.target.value); const [y, m] = e.target.value.split('-').map(Number); setCurrentMonthDate(new Date(y, m - 1, 1)); } }}
+                          className="text-xs font-semibold bg-white border border-rose-200 rounded-lg px-2.5 py-1.5" />
+                        <button onClick={() => setIsDayAccordionOpen(!isDayAccordionOpen)} className="flex items-center gap-1 text-xs font-bold text-rose-800">
+                          <span>{isDayAccordionOpen ? 'Ocultar lista' : 'Desplegar lista'}</span>
+                          <Icon name={isDayAccordionOpen ? 'chevronUp' : 'chevronDown'} className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      {isDayAccordionOpen && (
+                        <div className="p-4 space-y-3 max-h-[500px] overflow-y-auto">
+                          {selectedDayAppointments.length === 0 ? (
+                            <p className="text-center text-xs text-stone-500 py-8">No hay clientas programadas para este día.</p>
+                          ) : selectedDayAppointments.map(app => {
+                            const isExp = expandedAppointmentId === app.id;
+                            const waUrl = `https://wa.me/${app.phone.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola ${app.clientName}, te recordamos tu cita en Aura Nail Studio a las ${app.time} hrs para ${app.service}.`)}`;
                             return (
-                              <div
-                                key={app.id}
-                                className={`rounded-2xl border transition-all overflow-hidden ${
-                                  app.status === 'Completada'
-                                    ? 'bg-emerald-50/30 border-emerald-200/80'
-                                    : app.status === 'Cancelada'
-                                    ? 'bg-stone-50 border-stone-200 opacity-65'
-                                    : 'bg-white border-rose-100 shadow-sm hover:border-rose-300'
-                                }`}
-                              >
-                                {/* Cabecera del Acordeón de cada Cita */}
-                                <div
-                                  onClick={() =>
-                                    setExpandedAppointmentId(isExpanded ? null : app.id)
-                                  }
-                                  className="p-3.5 cursor-pointer flex items-center justify-between gap-3"
-                                >
-                                  <div className="flex items-center gap-3 min-w-0">
-                                    <div
-                                      className={`px-2.5 py-1.5 rounded-xl text-xs font-bold shrink-0 flex items-center gap-1 ${
-                                        app.status === 'Completada'
-                                          ? 'bg-emerald-100 text-emerald-800'
-                                          : app.status === 'Cancelada'
-                                          ? 'bg-stone-200 text-stone-600'
-                                          : 'bg-rose-100 text-rose-900'
-                                      }`}
-                                    >
-                                      <Clock className="w-3.5 h-3.5" />
-                                      {app.time}
-                                    </div>
+                              <div key={app.id} className="rounded-2xl border border-rose-100 overflow-hidden bg-white shadow-sm">
+                                <div onClick={() => setExpandedAppointmentId(isExp ? null : app.id)} className="p-3.5 cursor-pointer flex items-center justify-between gap-2">
+                                  <div className="flex items-center gap-2.5 min-w-0">
+                                    <span className="px-2.5 py-1 rounded-xl text-xs font-bold bg-rose-100 text-rose-900 shrink-0">{app.time}</span>
                                     <div className="truncate">
-                                      <h4 className="text-sm font-bold text-stone-900 truncate">
-                                        {app.clientName}
-                                      </h4>
+                                      <h4 className="text-sm font-bold text-stone-900 truncate">{app.clientName}</h4>
                                       <p className="text-xs text-stone-500 truncate">{app.service}</p>
                                     </div>
                                   </div>
-
-                                  <div className="flex items-center gap-2 shrink-0">
-                                    <span
-                                      className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
-                                        app.status === 'Completada'
-                                          ? 'bg-emerald-100 text-emerald-800'
-                                          : app.status === 'Cancelada'
-                                          ? 'bg-red-100 text-red-700'
-                                          : 'bg-amber-100 text-amber-800'
-                                      }`}
-                                    >
-                                      {app.status}
-                                    </span>
-                                    {isExpanded ? (
-                                      <ChevronUp className="w-4 h-4 text-stone-400" />
-                                    ) : (
-                                      <ChevronDown className="w-4 h-4 text-stone-400" />
-                                    )}
-                                  </div>
+                                  <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${app.status === 'Completada' ? 'bg-emerald-100 text-emerald-800' : app.status === 'Cancelada' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-800'}`}>{app.status}</span>
                                 </div>
-
-                                {/* Detalles Desplegados */}
-                                {isExpanded && (
-                                  <div className="px-4 pb-4 pt-2 border-t border-rose-100/60 bg-rose-50/20 space-y-3 text-xs">
-                                    <div className="grid grid-cols-2 gap-2">
-                                      <div className="bg-white p-2.5 rounded-xl border border-stone-100">
-                                        <span className="text-stone-400 block">Teléfono / WhatsApp</span>
-                                        <span className="font-semibold text-stone-800 mt-0.5 block">
-                                          {app.phone || 'No registrado'}
-                                        </span>
-                                      </div>
-                                      <div className="bg-white p-2.5 rounded-xl border border-stone-100">
-                                        <span className="text-stone-400 block">Costo Estimado</span>
-                                        <span className="font-bold text-rose-800 mt-0.5 block">
-                                          ${Number(app.price).toLocaleString()} MXN
-                                        </span>
-                                      </div>
-                                    </div>
-
-                                    {app.notes && (
-                                      <div className="bg-white p-2.5 rounded-xl border border-stone-100">
-                                        <span className="text-stone-400 block mb-0.5">Notas de diseño / servicio:</span>
-                                        <p className="text-stone-700 leading-relaxed">{app.notes}</p>
-                                      </div>
-                                    )}
-
-                                    {/* Botones de Acción Rápida */}
+                                {isExp && (
+                                  <div className="px-4 pb-4 pt-2 border-t border-rose-100/60 bg-rose-50/20 space-y-2.5 text-xs">
+                                    <p><span className="text-stone-400">Tel:</span> <strong>{app.phone || 'N/A'}</strong> · <span className="text-stone-400">Precio:</span> <strong>${app.price}</strong></p>
+                                    {app.notes && <p className="text-stone-600 bg-white p-2 rounded-xl border border-stone-100">{app.notes}</p>}
                                     <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-                                      <div className="flex flex-wrap items-center gap-1.5">
-                                        {cleanPhone && (
-                                          <a
-                                            href={whatsappUrl}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold transition-colors"
-                                          >
-                                            <Phone className="w-3.5 h-3.5" />
-                                            <span>WhatsApp</span>
-                                          </a>
-                                        )}
-
-                                        {app.status !== 'Completada' && (
-                                          <button
-                                            onClick={() => handleStatusChange(app.id, 'Completada')}
-                                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-emerald-100 hover:bg-emerald-200 text-emerald-900 font-semibold transition-colors"
-                                          >
-                                            <CheckCircle2 className="w-3.5 h-3.5" />
-                                            <span>Completar</span>
-                                          </button>
-                                        )}
-
-                                        {app.status === 'Pendiente' && (
-                                          <button
-                                            onClick={() => handleStatusChange(app.id, 'Cancelada')}
-                                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-stone-200 hover:bg-stone-300 text-stone-700 font-semibold transition-colors"
-                                          >
-                                            <XCircle className="w-3.5 h-3.5" />
-                                            <span>Cancelar</span>
-                                          </button>
-                                        )}
+                                      <div className="flex gap-1.5">
+                                        {app.phone && <a href={waUrl} target="_blank" rel="noreferrer" className="px-3 py-1.5 rounded-xl bg-emerald-600 text-white font-semibold">WhatsApp</a>}
+                                        {app.status !== 'Completada' && <button onClick={() => setAppointments(p => p.map(x => x.id === app.id ? { ...x, status: 'Completada' } : x))} className="px-2.5 py-1.5 rounded-xl bg-emerald-100 text-emerald-900 font-semibold">Completar</button>}
                                       </div>
-
-                                      <div className="flex items-center gap-1">
-                                        <button
-                                          onClick={() => openEditAppointmentModal(app)}
-                                          className="p-1.5 rounded-lg text-stone-500 hover:text-rose-800 hover:bg-rose-100 transition-colors"
-                                          title="Editar cita"
-                                        >
-                                          <Edit3 className="w-4 h-4" />
-                                        </button>
-                                        {deleteConfirmId === app.id ? (
-                                          <div className="flex items-center gap-1 bg-red-50 px-2 py-1 rounded-lg border border-red-200">
-                                            <button
-                                              onClick={() => handleDeleteAppointment(app.id)}
-                                              className="text-red-700 font-bold hover:underline"
-                                            >
-                                              Borrar
-                                            </button>
-                                            <button
-                                              onClick={() => setDeleteConfirmId(null)}
-                                              className="text-stone-500 ml-1"
-                                            >
-                                              No
-                                            </button>
-                                          </div>
-                                        ) : (
-                                          <button
-                                            onClick={() => setDeleteConfirmId(app.id)}
-                                            className="p-1.5 rounded-lg text-stone-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                                            title="Eliminar cita"
-                                          >
-                                            <Trash2 className="w-4 h-4" />
-                                          </button>
-                                        )}
+                                      <div className="flex gap-1">
+                                        <button onClick={() => { setEditingAppointment(app); setAppointmentForm(app); setAppointmentModalOpen(true); }} className="p-1.5 text-stone-500 hover:text-rose-800"><Icon name="edit" className="w-4 h-4" /></button>
+                                        <button onClick={() => setAppointments(p => p.filter(x => x.id !== app.id))} className="p-1.5 text-stone-400 hover:text-red-600"><Icon name="trash" className="w-4 h-4" /></button>
                                       </div>
                                     </div>
                                   </div>
                                 )}
                               </div>
                             );
-                          })
-                        )}
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  /* MÓDULO INVENTARIO */
+                  <div className="space-y-6">
+                    <div className="bg-white rounded-3xl border border-rose-100 p-5 shadow-sm flex flex-wrap items-center justify-between gap-4">
+                      <div>
+                        <h2 className="text-lg font-bold text-stone-900">Inventario de Insumos y Costos</h2>
+                        <p className="text-xs text-stone-500">Registra compras (entradas), consumo en salón (salidas) y revisa costos.</p>
                       </div>
-                    )}
-                  </div>
-
-                  {/* Vista Rápida de Próximos Días Agendados */}
-                  <div className="bg-white rounded-3xl border border-rose-100 p-5 shadow-sm">
-                    <h4 className="text-sm font-bold text-stone-800 mb-3 flex items-center gap-2">
-                      <TrendingUp className="w-4 h-4 text-rose-600" />
-                      <span>Próximos Días con Citas</span>
-                    </h4>
-                    <div className="space-y-2">
-                      {upcomingGroupedDays.map(([dateKey, apps]) => (
-                        <button
-                          key={dateKey}
-                          onClick={() => {
-                            setSelectedDate(dateKey);
-                            const [y, m] = dateKey.split('-').map(Number);
-                            setCurrentMonthDate(new Date(y, m - 1, 1));
-                            setIsDayAccordionOpen(true);
-                          }}
-                          className={`w-full flex items-center justify-between p-2.5 rounded-xl border text-left text-xs transition-all ${
-                            selectedDate === dateKey
-                              ? 'bg-rose-50 border-rose-300 text-rose-950 font-semibold'
-                              : 'bg-stone-50/70 border-stone-100 hover:border-rose-200 text-stone-700'
-                          }`}
-                        >
-                          <span className="capitalize">{formatReadableDate(dateKey)}</span>
-                          <span className="px-2.5 py-0.5 rounded-full bg-white border border-rose-100 text-rose-800 font-bold">
-                            {apps.length} {apps.length === 1 ? 'clienta' : 'clientas'}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              /* ==============================================================
-                 MÓDULO 2: INVENTARIO CON COSTOS Y MOVIMIENTOS (ENTRADAS / SALIDAS)
-                 ============================================================== */
-              <div className="space-y-6">
-                {/* Barra de Acciones Principales de Inventario */}
-                <div className="bg-white rounded-3xl border border-rose-100 p-5 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div>
-                    <h2 className="text-lg font-bold text-stone-900">Control de Insumos y Costos</h2>
-                    <p className="text-xs text-stone-500">
-                      Administra tu stock actual, registra entradas por compra y salidas por uso en salón.
-                    </p>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-2.5">
-                    <button
-                      onClick={() => openMovementModal('ENTRADA')}
-                      className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition-all"
-                    >
-                      <ArrowDownRight className="w-4 h-4" />
-                      <span>Registrar Entrada</span>
-                    </button>
-
-                    <button
-                      onClick={() => openMovementModal('SALIDA')}
-                      className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-rose-700 hover:bg-rose-800 text-white text-xs font-bold shadow-sm transition-all"
-                    >
-                      <ArrowUpRight className="w-4 h-4" />
-                      <span>Registrar Salida</span>
-                    </button>
-
-                    <button
-                      onClick={() => setNewProductModalOpen(true)}
-                      className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-stone-900 hover:bg-stone-800 text-white text-xs font-bold shadow-sm transition-all"
-                    >
-                      <Plus className="w-4 h-4" />
-                      <span>Nuevo Insumo</span>
-                    </button>
-
-                    <div className="flex items-center gap-1 border-l border-stone-200 pl-2.5">
-                      <button
-                        onClick={handleExportCSV}
-                        className="inline-flex items-center gap-1 px-3 py-2.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-semibold transition-colors"
-                        title="Descargar inventario en Excel / CSV"
-                      >
-                        <Download className="w-3.5 h-3.5" />
-                        <span>CSV</span>
-                      </button>
-                      <button
-                        onClick={handleExportJSON}
-                        className="inline-flex items-center gap-1 px-3 py-2.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-semibold transition-colors"
-                        title="Descargar respaldo completo JSON"
-                      >
-                        <Download className="w-3.5 h-3.5" />
-                        <span>JSON</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Tabla de Inventario Actual */}
-                <div className="bg-white rounded-3xl border border-rose-100 shadow-sm overflow-hidden">
-                  {/* Filtros de Búsqueda */}
-                  <div className="p-5 border-b border-rose-100 bg-rose-50/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div className="relative flex-1 max-w-md">
-                      <Search className="w-4 h-4 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                      <input
-                        type="text"
-                        placeholder="Buscar por nombre o código SKU..."
-                        value={inventorySearch}
-                        onChange={(e) => setInventorySearch(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 text-xs bg-white border border-rose-200/80 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-400"
-                      />
+                      <div className="flex flex-wrap gap-2">
+                        <button onClick={() => openMovementModal('ENTRADA')} className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-600 text-white text-xs font-bold"><Icon name="arrowDownRight" className="w-4 h-4" /><span>Entrada</span></button>
+                        <button onClick={() => openMovementModal('SALIDA')} className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-rose-700 text-white text-xs font-bold"><Icon name="arrowUpRight" className="w-4 h-4" /><span>Salida</span></button>
+                        <button onClick={() => setNewProductModalOpen(true)} className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-stone-900 text-white text-xs font-bold"><Icon name="plus" className="w-4 h-4" /><span>Nuevo Insumo</span></button>
+                        <button onClick={handleExportCSV} className="inline-flex items-center gap-1 px-3 py-2.5 rounded-xl bg-stone-100 text-stone-700 text-xs font-semibold"><Icon name="download" className="w-4 h-4" /><span>CSV</span></button>
+                      </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2">
-                      <div className="flex items-center gap-1.5 bg-white border border-rose-200/80 rounded-xl px-3 py-1.5">
-                        <Filter className="w-3.5 h-3.5 text-rose-600" />
-                        <select
-                          value={categoryFilter}
-                          onChange={(e) => setCategoryFilter(e.target.value)}
-                          className="text-xs font-medium text-stone-700 bg-transparent focus:outline-none"
-                        >
-                          <option value="Todas">Todas las categorías</option>
-                          {INVENTORY_CATEGORIES.map(cat => (
-                            <option key={cat} value={cat}>
-                              {cat}
-                            </option>
-                          ))}
-                        </select>
+                    <div className="bg-white rounded-3xl border border-rose-100 shadow-sm overflow-hidden">
+                      <div className="p-4 border-b border-rose-100 bg-rose-50/30 flex flex-wrap gap-3 justify-between">
+                        <input type="text" placeholder="Buscar insumo o SKU..." value={inventorySearch} onChange={(e) => setInventorySearch(e.target.value)} className="px-3.5 py-2 text-xs bg-white border border-rose-200 rounded-xl w-full sm:w-64" />
+                        <div className="flex gap-2">
+                          <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="text-xs bg-white border border-rose-200 rounded-xl px-3 py-2">
+                            <option value="Todas">Todas las categorías</option>
+                            {INVENTORY_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                          </select>
+                          <button onClick={() => setOnlyLowStock(!onlyLowStock)} className={`px-3 py-2 rounded-xl text-xs font-bold border ${onlyLowStock ? 'bg-amber-100 border-amber-300 text-amber-900' : 'bg-white border-rose-200 text-stone-600'}`}>Stock Bajo</button>
+                        </div>
                       </div>
 
-                      <button
-                        onClick={() => setOnlyLowStock(!onlyLowStock)}
-                        className={`px-3 py-2 rounded-xl text-xs font-semibold border transition-all flex items-center gap-1.5 ${
-                          onlyLowStock
-                            ? 'bg-amber-100 border-amber-300 text-amber-900'
-                            : 'bg-white border-rose-200/80 text-stone-600 hover:bg-rose-50'
-                        }`}
-                      >
-                        <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
-                        <span>Solo Stock Bajo</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Tabla Responsiva */}
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                      <thead>
-                        <tr className="bg-stone-50/80 border-b border-stone-200/70 text-[11px] uppercase tracking-wider text-stone-500">
-                          <th className="py-3.5 px-4 font-semibold">Código SKU</th>
-                          <th className="py-3.5 px-4 font-semibold">Insumo</th>
-                          <th className="py-3.5 px-4 font-semibold">Categoría</th>
-                          <th className="py-3.5 px-4 font-semibold text-center">Stock Actual</th>
-                          <th className="py-3.5 px-4 font-semibold text-center">Mínimo</th>
-                          <th className="py-3.5 px-4 font-semibold text-right">Costo Unitario</th>
-                          <th className="py-3.5 px-4 font-semibold text-right">Valor Total</th>
-                          <th className="py-3.5 px-4 font-semibold text-center">Movimientos Rápidos</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-stone-100 text-xs">
-                        {filteredInventory.length === 0 ? (
-                          <tr>
-                            <td colSpan="8" className="py-8 text-center text-stone-500">
-                              No se encontraron insumos con los filtros seleccionados.
-                            </td>
-                          </tr>
-                        ) : (
-                          filteredInventory.map(item => {
-                            const isLow = item.stock <= item.minStock;
-                            const totalVal = item.stock * item.unitCost;
-
-                            return (
-                              <tr
-                                key={item.id}
-                                className={`transition-colors ${
-                                  isLow ? 'bg-amber-50/40 hover:bg-amber-50/80' : 'hover:bg-rose-50/30'
-                                }`}
-                              >
-                                <td className="py-3.5 px-4 font-mono font-semibold text-stone-600">
-                                  {item.sku}
-                                </td>
-                                <td className="py-3.5 px-4 font-bold text-stone-900">
-                                  <div className="flex items-center gap-2">
-                                    <span>{item.name}</span>
-                                    {isLow && (
-                                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
-                                        Stock Bajo
-                                      </span>
-                                    )}
-                                  </div>
-                                </td>
-                                <td className="py-3.5 px-4">
-                                  <span className="px-2.5 py-1 rounded-lg bg-rose-50 text-rose-800 font-medium">
-                                    {item.category}
-                                  </span>
-                                </td>
-                                <td className="py-3.5 px-4 text-center">
-                                  <span
-                                    className={`inline-block min-w-[2.5rem] px-2 py-1 rounded-lg font-bold ${
-                                      isLow
-                                        ? 'bg-amber-100 text-amber-900'
-                                        : 'bg-stone-100 text-stone-800'
-                                    }`}
-                                  >
-                                    {item.stock}
-                                  </span>
-                                </td>
-                                <td className="py-3.5 px-4 text-center text-stone-500 font-medium">
-                                  {item.minStock}
-                                </td>
-                                <td className="py-3.5 px-4 text-right font-medium text-stone-700">
-                                  ${item.unitCost.toFixed(2)}
-                                </td>
-                                <td className="py-3.5 px-4 text-right font-bold text-stone-900">
-                                  ${totalVal.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                </td>
-                                <td className="py-3.5 px-4">
-                                  <div className="flex items-center justify-center gap-1.5">
-                                    <button
-                                      onClick={() => openMovementModal('ENTRADA', item)}
-                                      className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold border border-emerald-200 transition-colors"
-                                      title="Registrar entrada de este producto"
-                                    >
-                                      + Entrada
-                                    </button>
-                                    <button
-                                      onClick={() => openMovementModal('SALIDA', item)}
-                                      className="px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold border border-rose-200 transition-colors"
-                                      title="Registrar salida por consumo"
-                                    >
-                                      - Salida
-                                    </button>
-                                  </div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse text-xs">
+                          <thead>
+                            <tr className="bg-stone-50 border-b border-stone-200 text-stone-500 uppercase text-[11px]">
+                              <th className="py-3 px-4">SKU</th>
+                              <th className="py-3 px-4">Insumo</th>
+                              <th className="py-3 px-4">Categoría</th>
+                              <th className="py-3 px-4 text-center">Stock</th>
+                              <th className="py-3 px-4 text-right">Costo Unit.</th>
+                              <th className="py-3 px-4 text-right">Valor Total</th>
+                              <th className="py-3 px-4 text-center">Acciones</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-stone-100">
+                            {filteredInventory.map(item => (
+                              <tr key={item.id} className={item.stock <= item.minStock ? 'bg-amber-50/40' : ''}>
+                                <td className="py-3 px-4 font-mono font-semibold text-stone-600">{item.sku}</td>
+                                <td className="py-3 px-4 font-bold text-stone-900">{item.name}</td>
+                                <td className="py-3 px-4"><span className="px-2 py-0.5 rounded bg-rose-50 text-rose-800">{item.category}</span></td>
+                                <td className="py-3 px-4 text-center font-bold">{item.stock}</td>
+                                <td className="py-3 px-4 text-right">${item.unitCost.toFixed(2)}</td>
+                                <td className="py-3 px-4 text-right font-bold">${(item.stock * item.unitCost).toFixed(2)}</td>
+                                <td className="py-3 px-4 text-center space-x-1">
+                                  <button onClick={() => openMovementModal('ENTRADA', item)} className="px-2 py-1 rounded bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">+ Entrada</button>
+                                  <button onClick={() => openMovementModal('SALIDA', item)} className="px-2 py-1 rounded bg-rose-50 text-rose-700 font-bold border border-rose-200">- Salida</button>
                                 </td>
                               </tr>
-                            );
-                          })
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                {/* Historial de Movimientos (Entradas y Salidas) */}
-                <div className="bg-white rounded-3xl border border-rose-100 shadow-sm overflow-hidden">
-                  <div className="p-5 border-b border-rose-100 flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <h3 className="text-base font-bold text-stone-900">
-                        Historial de Entradas y Salidas
-                      </h3>
-                      <p className="text-xs text-stone-500">
-                        Bitácora automática de compras y consumo de insumos en el estudio
-                      </p>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
 
-                    <div className="flex bg-stone-100 p-1 rounded-xl">
-                      {['TODOS', 'ENTRADA', 'SALIDA'].map(type => (
-                        <button
-                          key={type}
-                          onClick={() => setMovementFilter(type)}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                            movementFilter === type
-                              ? 'bg-white text-stone-900 shadow-sm'
-                              : 'text-stone-500 hover:text-stone-800'
-                          }`}
-                        >
-                          {type === 'TODOS' ? 'Todos' : type === 'ENTRADA' ? 'Entradas' : 'Salidas'}
-                        </button>
-                      ))}
+                    {/* Historial de Movimientos */}
+                    <div className="bg-white rounded-3xl border border-rose-100 shadow-sm overflow-hidden">
+                      <div className="p-4 border-b border-rose-100 flex justify-between items-center">
+                        <h3 className="text-sm font-bold text-stone-900">Historial de Entradas y Salidas</h3>
+                        <div className="flex gap-1 bg-stone-100 p-1 rounded-xl text-xs">
+                          {['TODOS', 'ENTRADA', 'SALIDA'].map(t => (
+                            <button key={t} onClick={() => setMovementFilter(t)} className={`px-2.5 py-1 rounded-lg font-bold ${movementFilter === t ? 'bg-white shadow-sm' : 'text-stone-500'}`}>{t}</button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse text-xs">
+                          <thead>
+                            <tr className="bg-stone-50 border-b border-stone-200 text-stone-500 uppercase text-[11px]">
+                              <th className="py-3 px-4">Fecha</th>
+                              <th className="py-3 px-4">Tipo</th>
+                              <th className="py-3 px-4">Insumo</th>
+                              <th className="py-3 px-4 text-center">Cant.</th>
+                              <th className="py-3 px-4 text-right">Total</th>
+                              <th className="py-3 px-4">Nota</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-stone-100">
+                            {filteredMovements.map(m => (
+                              <tr key={m.id}>
+                                <td className="py-3 px-4">{m.date}</td>
+                                <td className="py-3 px-4"><span className={`px-2 py-0.5 rounded-full font-bold text-[11px] ${m.type === 'ENTRADA' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}`}>{m.type}</span></td>
+                                <td className="py-3 px-4 font-bold">{m.itemName}</td>
+                                <td className="py-3 px-4 text-center font-bold">{m.type === 'ENTRADA' ? `+${m.quantity}` : `-${m.quantity}`}</td>
+                                <td className="py-3 px-4 text-right font-bold">${m.totalCost.toFixed(2)}</td>
+                                <td className="py-3 px-4 text-stone-500">{m.notes}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
                   </div>
-
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                      <thead>
-                        <tr className="bg-stone-50/80 border-b border-stone-200/70 text-[11px] uppercase tracking-wider text-stone-500">
-                          <th className="py-3 px-4 font-semibold">Fecha</th>
-                          <th className="py-3 px-4 font-semibold">Tipo</th>
-                          <th className="py-3 px-4 font-semibold">Insumo</th>
-                          <th className="py-3 px-4 font-semibold text-center">Cantidad</th>
-                          <th className="py-3 px-4 font-semibold text-right">Costo Unit.</th>
-                          <th className="py-3 px-4 font-semibold text-right">Total</th>
-                          <th className="py-3 px-4 font-semibold">Motivo / Nota</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-stone-100 text-xs">
-                        {filteredMovements.map(mov => (
-                          <tr key={mov.id} className="hover:bg-stone-50/60">
-                            <td className="py-3 px-4 text-stone-600 font-medium">{mov.date}</td>
-                            <td className="py-3 px-4">
-                              {mov.type === 'ENTRADA' ? (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[11px]">
-                                  <ArrowDownRight className="w-3 h-3" /> Entrada
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 font-bold text-[11px]">
-                                  <ArrowUpRight className="w-3 h-3" /> Salida
-                                </span>
-                              )}
-                            </td>
-                            <td className="py-3 px-4 font-bold text-stone-800">
-                              {mov.itemName}{' '}
-                              <span className="font-mono font-normal text-stone-400">({mov.sku})</span>
-                            </td>
-                            <td className="py-3 px-4 text-center font-bold">
-                              <span className={mov.type === 'ENTRADA' ? 'text-emerald-700' : 'text-rose-700'}>
-                                {mov.type === 'ENTRADA' ? `+${mov.quantity}` : `-${mov.quantity}`}
-                              </span>
-                            </td>
-                            <td className="py-3 px-4 text-right text-stone-600">
-                              ${mov.unitCost.toFixed(2)}
-                            </td>
-                            <td className="py-3 px-4 text-right font-bold text-stone-900">
-                              ${mov.totalCost.toFixed(2)}
-                            </td>
-                            <td className="py-3 px-4 text-stone-500 max-w-xs truncate">{mov.notes}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            )}
-          </main>
-        </>
-      )}
-
-      {/* ======================================================================
-          MODAL 1: AGENDAR O EDITAR CITA
-          ====================================================================== */}
-      {appointmentModalOpen && (
-        <div className="fixed inset-0 z-50 bg-stone-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-rose-100 overflow-hidden">
-            <div className="px-6 py-4 bg-gradient-to-r from-rose-900 to-rose-800 text-white flex items-center justify-between">
-              <h3 className="font-bold text-base flex items-center gap-2">
-                <CalendarIcon className="w-5 h-5 text-rose-200" />
-                <span>{editingAppointment ? 'Editar Cita' : 'Agendar Nueva Cita'}</span>
-              </h3>
-              <button
-                onClick={() => setAppointmentModalOpen(false)}
-                className="p-1 rounded-lg hover:bg-white/15 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveAppointment} className="p-6 space-y-4 text-xs">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block font-semibold text-stone-700 mb-1">Nombre de la Clienta *</label>
-                  <div className="relative">
-                    <User className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="text"
-                      required
-                      placeholder="Ej. Daniela Morales"
-                      value={appointmentForm.clientName}
-                      onChange={(e) => setAppointmentForm({ ...appointmentForm, clientName: e.target.value })}
-                      className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-rose-400"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block font-semibold text-stone-700 mb-1">WhatsApp / Teléfono</label>
-                  <div className="relative">
-                    <Phone className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="tel"
-                      placeholder="Ej. 526871234567"
-                      value={appointmentForm.phone}
-                      onChange={(e) => setAppointmentForm({ ...appointmentForm, phone: e.target.value })}
-                      className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-rose-400"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block font-semibold text-stone-700 mb-1">Fecha *</label>
-                  <input
-                    type="date"
-                    required
-                    value={appointmentForm.date}
-                    onChange={(e) => setAppointmentForm({ ...appointmentForm, date: e.target.value })}
-                    className="w-full px-3 py-2.5 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-rose-400"
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-semibold text-stone-700 mb-1">Hora *</label>
-                  <input
-                    type="time"
-                    required
-                    value={appointmentForm.time}
-                    onChange={(e) => setAppointmentForm({ ...appointmentForm, time: e.target.value })}
-                    className="w-full px-3 py-2.5 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-rose-400"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="sm:col-span-2">
-                  <label className="block font-semibold text-stone-700 mb-1">Servicio</label>
-                  <select
-                    value={appointmentForm.service}
-                    onChange={(e) => setAppointmentForm({ ...appointmentForm, service: e.target.value })}
-                    className="w-full px-3 py-2.5 rounded-xl border border-stone-200 bg-white focus:outline-none focus:ring-2 focus:ring-rose-400"
-                  >
-                    {NAIL_SERVICES.map(srv => (
-                      <option key={srv} value={srv}>
-                        {srv}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block font-semibold text-stone-700 mb-1">Precio Est. ($)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="10"
-                    value={appointmentForm.price}
-                    onChange={(e) => setAppointmentForm({ ...appointmentForm, price: e.target.value })}
-                    className="w-full px-3 py-2.5 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-rose-400"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-semibold text-stone-700 mb-1">Notas de diseño o detalles</label>
-                <div className="relative">
-                  <FileText className="w-4 h-4 text-stone-400 absolute left-3 top-3" />
-                  <textarea
-                    rows="2"
-                    placeholder="Largo, forma de punta, colores o referencia..."
-                    value={appointmentForm.notes}
-                    onChange={(e) => setAppointmentForm({ ...appointmentForm, notes: e.target.value })}
-                    className="w-full pl-9 pr-3 py-2 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-rose-400"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-stone-100">
-                <button
-                  type="button"
-                  onClick={() => setAppointmentModalOpen(false)}
-                  className="px-4 py-2.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 font-semibold"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-rose-800 hover:bg-rose-900 text-white font-bold shadow-sm"
-                >
-                  <Check className="w-4 h-4" />
-                  <span>{editingAppointment ? 'Guardar Cambios' : 'Confirmar Cita'}</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ======================================================================
-          MODAL 2: REGISTRAR ENTRADA O SALIDA DE INVENTARIO
-          ====================================================================== */}
-      {movementModalOpen && (
-        <div className="fixed inset-0 z-50 bg-stone-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-rose-100 overflow-hidden">
-            <div
-              className={`px-6 py-4 text-white flex items-center justify-between ${
-                movementForm.type === 'ENTRADA' ? 'bg-emerald-700' : 'bg-rose-800'
-              }`}
-            >
-              <h3 className="font-bold text-base flex items-center gap-2">
-                {movementForm.type === 'ENTRADA' ? (
-                  <>
-                    <ArrowDownRight className="w-5 h-5" />
-                    <span>Registrar Entrada de Insumo</span>
-                  </>
-                ) : (
-                  <>
-                    <ArrowUpRight className="w-5 h-5" />
-                    <span>Registrar Salida de Insumo</span>
-                  </>
                 )}
-              </h3>
-              <button
-                onClick={() => setMovementModalOpen(false)}
-                className="p-1 rounded-lg hover:bg-white/15 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              </main>
+            </>
+          )}
+
+          {/* MODAL CITA */}
+          {appointmentModalOpen && (
+            <div className="fixed inset-0 z-50 bg-stone-900/50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-3xl max-w-md w-full overflow-hidden shadow-2xl">
+                <div className="px-6 py-4 bg-rose-900 text-white flex justify-between items-center">
+                  <h3 className="font-bold text-sm">{editingAppointment ? 'Editar Cita' : 'Nueva Cita'}</h3>
+                  <button onClick={() => setAppointmentModalOpen(false)}><Icon name="x" className="w-5 h-5" /></button>
+                </div>
+                <form onSubmit={handleSaveAppointment} className="p-6 space-y-3 text-xs">
+                  <input type="text" required placeholder="Nombre de la clienta *" value={appointmentForm.clientName} onChange={e => setAppointmentForm({ ...appointmentForm, clientName: e.target.value })} className="w-full px-3 py-2.5 rounded-xl border border-stone-200" />
+                  <input type="tel" placeholder="WhatsApp (Ej. 526871234567)" value={appointmentForm.phone} onChange={e => setAppointmentForm({ ...appointmentForm, phone: e.target.value })} className="w-full px-3 py-2.5 rounded-xl border border-stone-200" />
+                  <div className="grid grid-cols-2 gap-3">
+                    <input type="date" required value={appointmentForm.date} onChange={e => setAppointmentForm({ ...appointmentForm, date: e.target.value })} className="w-full px-3 py-2.5 rounded-xl border border-stone-200" />
+                    <input type="time" required value={appointmentForm.time} onChange={e => setAppointmentForm({ ...appointmentForm, time: e.target.value })} className="w-full px-3 py-2.5 rounded-xl border border-stone-200" />
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <select value={appointmentForm.service} onChange={e => setAppointmentForm({ ...appointmentForm, service: e.target.value })} className="col-span-2 px-3 py-2.5 rounded-xl border border-stone-200 bg-white">
+                      {NAIL_SERVICES.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                    <input type="number" placeholder="Precio ($)" value={appointmentForm.price} onChange={e => setAppointmentForm({ ...appointmentForm, price: e.target.value })} className="px-3 py-2.5 rounded-xl border border-stone-200" />
+                  </div>
+                  <textarea rows="2" placeholder="Notas de diseño..." value={appointmentForm.notes} onChange={e => setAppointmentForm({ ...appointmentForm, notes: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-stone-200" />
+                  <div className="flex justify-end gap-2 pt-2">
+                    <button type="button" onClick={() => setAppointmentModalOpen(false)} className="px-4 py-2 rounded-xl bg-stone-100 font-semibold">Cancelar</button>
+                    <button type="submit" className="px-5 py-2 rounded-xl bg-rose-800 text-white font-bold">Guardar Cita</button>
+                  </div>
+                </form>
+              </div>
             </div>
+          )}
 
-            <form onSubmit={handleSaveMovement} className="p-6 space-y-4 text-xs">
-              <div className="flex bg-stone-100 p-1 rounded-xl">
-                <button
-                  type="button"
-                  onClick={() => setMovementForm({ ...movementForm, type: 'ENTRADA' })}
-                  className={`flex-1 py-2 rounded-lg font-bold transition-all ${
-                    movementForm.type === 'ENTRADA'
-                      ? 'bg-emerald-600 text-white shadow-sm'
-                      : 'text-stone-600'
-                  }`}
-                >
-                  + Entrada (Compra)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMovementForm({ ...movementForm, type: 'SALIDA' })}
-                  className={`flex-1 py-2 rounded-lg font-bold transition-all ${
-                    movementForm.type === 'SALIDA'
-                      ? 'bg-rose-700 text-white shadow-sm'
-                      : 'text-stone-600'
-                  }`}
-                >
-                  - Salida (Consumo)
-                </button>
-              </div>
-
-              <div>
-                <label className="block font-semibold text-stone-700 mb-1">Insumo *</label>
-                <select
-                  value={movementForm.itemId}
-                  onChange={(e) => handleMovementItemChange(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl border border-stone-200 bg-white focus:outline-none focus:ring-2 focus:ring-rose-400"
-                >
-                  {inventory.map(item => (
-                    <option key={item.id} value={item.id}>
-                      [{item.sku}] {item.name} (Stock actual: {item.stock})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block font-semibold text-stone-700 mb-1">Cantidad *</label>
-                  <input
-                    type="number"
-                    min="1"
-                    required
-                    value={movementForm.quantity}
-                    onChange={(e) => setMovementForm({ ...movementForm, quantity: e.target.value })}
-                    className="w-full px-3 py-2.5 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-rose-400"
-                  />
+          {/* MODAL MOVIMIENTO INVENTARIO */}
+          {movementModalOpen && (
+            <div className="fixed inset-0 z-50 bg-stone-900/50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-3xl max-w-md w-full overflow-hidden shadow-2xl">
+                <div className={`px-6 py-4 text-white flex justify-between items-center ${movementForm.type === 'ENTRADA' ? 'bg-emerald-700' : 'bg-rose-800'}`}>
+                  <h3 className="font-bold text-sm">Registrar {movementForm.type}</h3>
+                  <button onClick={() => setMovementModalOpen(false)}><Icon name="x" className="w-5 h-5" /></button>
                 </div>
-
-                <div>
-                  <label className="block font-semibold text-stone-700 mb-1">
-                    {movementForm.type === 'ENTRADA' ? 'Costo Compra Unit. ($)' : 'Costo Ref. ($)'}
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    required
-                    disabled={movementForm.type === 'SALIDA'}
-                    value={movementForm.unitCost}
-                    onChange={(e) =>
-                      setMovementForm({ ...movementForm, unitCost: e.target.value })
-                    }
-                    className="w-full px-3 py-2.5 rounded-xl border border-stone-200 disabled:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-rose-400"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-semibold text-stone-700 mb-1">Fecha</label>
-                <input
-                  type="date"
-                  required
-                  value={movementForm.date}
-                  onChange={(e) => setMovementForm({ ...movementForm, date: e.target.value })}
-                  className="w-full px-3 py-2.5 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-rose-400"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-stone-700 mb-1">Motivo / Nota</label>
-                <input
-                  type="text"
-                  placeholder={
-                    movementForm.type === 'ENTRADA'
-                      ? 'Ej. Compra a distribuidor local, factura #45'
-                      : 'Ej. Uso semanal en mesa de aplicación'
-                  }
-                  value={movementForm.notes}
-                  onChange={(e) => setMovementForm({ ...movementForm, notes: e.target.value })}
-                  className="w-full px-3 py-2.5 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-rose-400"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-stone-100">
-                <button
-                  type="button"
-                  onClick={() => setMovementModalOpen(false)}
-                  className="px-4 py-2.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 font-semibold"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className={`px-5 py-2.5 rounded-xl text-white font-bold shadow-sm ${
-                    movementForm.type === 'ENTRADA'
-                      ? 'bg-emerald-600 hover:bg-emerald-700'
-                      : 'bg-rose-700 hover:bg-rose-800'
-                  }`}
-                >
-                  Guardar Movimiento
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ======================================================================
-          MODAL 3: AGREGAR NUEVO INSUMO AL CATÁLOGO
-          ====================================================================== */}
-      {newProductModalOpen && (
-        <div className="fixed inset-0 z-50 bg-stone-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-rose-100 overflow-hidden">
-            <div className="px-6 py-4 bg-stone-900 text-white flex items-center justify-between">
-              <h3 className="font-bold text-base flex items-center gap-2">
-                <Package className="w-5 h-5 text-rose-300" />
-                <span>Nuevo Insumo en Catálogo</span>
-              </h3>
-              <button
-                onClick={() => setNewProductModalOpen(false)}
-                className="p-1 rounded-lg hover:bg-white/15 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleAddNewProduct} className="p-6 space-y-4 text-xs">
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="block font-semibold text-stone-700 mb-1">Código SKU *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Ej. GEL-050"
-                    value={newProductForm.sku}
-                    onChange={(e) => setNewProductForm({ ...newProductForm, sku: e.target.value })}
-                    className="w-full px-3 py-2.5 rounded-xl border border-stone-200 uppercase focus:outline-none focus:ring-2 focus:ring-rose-400"
-                  />
-                </div>
-                <div className="col-span-2">
-                  <label className="block font-semibold text-stone-700 mb-1">Categoría</label>
-                  <select
-                    value={newProductForm.category}
-                    onChange={(e) =>
-                      setNewProductForm({ ...newProductForm, category: e.target.value })
-                    }
-                    className="w-full px-3 py-2.5 rounded-xl border border-stone-200 bg-white focus:outline-none focus:ring-2 focus:ring-rose-400"
-                  >
-                    {INVENTORY_CATEGORIES.map(cat => (
-                      <option key={cat} value={cat}>
-                        {cat}
-                      </option>
-                    ))}
+                <form onSubmit={handleSaveMovement} className="p-6 space-y-3 text-xs">
+                  <select value={movementForm.itemId} onChange={e => { const it = inventory.find(x => x.id === e.target.value); setMovementForm({ ...movementForm, itemId: e.target.value, unitCost: it ? it.unitCost : 0 }); }} className="w-full px-3 py-2.5 rounded-xl border border-stone-200 bg-white">
+                    {inventory.map(it => <option key={it.id} value={it.id}>[{it.sku}] {it.name} (Stock: {it.stock})</option>)}
                   </select>
-                </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <input type="number" min="1" required placeholder="Cantidad" value={movementForm.quantity} onChange={e => setMovementForm({ ...movementForm, quantity: e.target.value })} className="px-3 py-2.5 rounded-xl border border-stone-200" />
+                    <input type="number" min="0" step="0.01" disabled={movementForm.type === 'SALIDA'} value={movementForm.unitCost} onChange={e => setMovementForm({ ...movementForm, unitCost: e.target.value })} className="px-3 py-2.5 rounded-xl border border-stone-200 disabled:bg-stone-100" />
+                  </div>
+                  <input type="date" required value={movementForm.date} onChange={e => setMovementForm({ ...movementForm, date: e.target.value })} className="w-full px-3 py-2.5 rounded-xl border border-stone-200" />
+                  <input type="text" placeholder="Motivo o nota..." value={movementForm.notes} onChange={e => setMovementForm({ ...movementForm, notes: e.target.value })} className="w-full px-3 py-2.5 rounded-xl border border-stone-200" />
+                  <div className="flex justify-end gap-2 pt-2">
+                    <button type="button" onClick={() => setMovementModalOpen(false)} className="px-4 py-2 rounded-xl bg-stone-100 font-semibold">Cancelar</button>
+                    <button type="submit" className={`px-5 py-2 rounded-xl text-white font-bold ${movementForm.type === 'ENTRADA' ? 'bg-emerald-600' : 'bg-rose-700'}`}>Guardar</button>
+                  </div>
+                </form>
               </div>
+            </div>
+          )}
 
-              <div>
-                <label className="block font-semibold text-stone-700 mb-1">Nombre del Insumo *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ej. Top Coat Cristal Efecto Espejo 15ml"
-                  value={newProductForm.name}
-                  onChange={(e) => setNewProductForm({ ...newProductForm, name: e.target.value })}
-                  className="w-full px-3 py-2.5 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-rose-400"
-                />
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="block font-semibold text-stone-700 mb-1">Stock Inicial</label>
-                  <input
-                    type="number"
-                    min="0"
-                    required
-                    value={newProductForm.stock}
-                    onChange={(e) => setNewProductForm({ ...newProductForm, stock: e.target.value })}
-                    className="w-full px-3 py-2.5 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-rose-400"
-                  />
+          {/* MODAL NUEVO INSUMO */}
+          {newProductModalOpen && (
+            <div className="fixed inset-0 z-50 bg-stone-900/50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-3xl max-w-md w-full overflow-hidden shadow-2xl">
+                <div className="px-6 py-4 bg-stone-900 text-white flex justify-between items-center">
+                  <h3 className="font-bold text-sm">Nuevo Insumo</h3>
+                  <button onClick={() => setNewProductModalOpen(false)}><Icon name="x" className="w-5 h-5" /></button>
                 </div>
-                <div>
-                  <label className="block font-semibold text-stone-700 mb-1">Stock Mínimo</label>
-                  <input
-                    type="number"
-                    min="0"
-                    required
-                    value={newProductForm.minStock}
-                    onChange={(e) =>
-                      setNewProductForm({ ...newProductForm, minStock: e.target.value })
-                    }
-                    className="w-full px-3 py-2.5 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-rose-400"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold text-stone-700 mb-1">Costo Unit. ($)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    required
-                    value={newProductForm.unitCost}
-                    onChange={(e) =>
-                      setNewProductForm({ ...newProductForm, unitCost: e.target.value })
-                    }
-                    className="w-full px-3 py-2.5 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-rose-400"
-                  />
-                </div>
+                <form onSubmit={handleAddNewProduct} className="p-6 space-y-3 text-xs">
+                  <div className="grid grid-cols-3 gap-3">
+                    <input type="text" required placeholder="SKU *" value={newProductForm.sku} onChange={e => setNewProductForm({ ...newProductForm, sku: e.target.value })} className="px-3 py-2.5 rounded-xl border border-stone-200 uppercase" />
+                    <select value={newProductForm.category} onChange={e => setNewProductForm({ ...newProductForm, category: e.target.value })} className="col-span-2 px-3 py-2.5 rounded-xl border border-stone-200 bg-white">
+                      {INVENTORY_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                  <input type="text" required placeholder="Nombre del insumo *" value={newProductForm.name} onChange={e => setNewProductForm({ ...newProductForm, name: e.target.value })} className="w-full px-3 py-2.5 rounded-xl border border-stone-200" />
+                  <div className="grid grid-cols-3 gap-3">
+                    <div><label className="text-[10px] text-stone-500">Stock Inicial</label><input type="number" min="0" required value={newProductForm.stock} onChange={e => setNewProductForm({ ...newProductForm, stock: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-stone-200" /></div>
+                    <div><label className="text-[10px] text-stone-500">Stock Mínimo</label><input type="number" min="0" required value={newProductForm.minStock} onChange={e => setNewProductForm({ ...newProductForm, minStock: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-stone-200" /></div>
+                    <div><label className="text-[10px] text-stone-500">Costo Unit. ($)</label><input type="number" min="0" step="0.01" required value={newProductForm.unitCost} onChange={e => setNewProductForm({ ...newProductForm, unitCost: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-stone-200" /></div>
+                  </div>
+                  <div className="flex justify-end gap-2 pt-2">
+                    <button type="button" onClick={() => setNewProductModalOpen(false)} className="px-4 py-2 rounded-xl bg-stone-100 font-semibold">Cancelar</button>
+                    <button type="submit" className="px-5 py-2 rounded-xl bg-stone-900 text-white font-bold">Agregar</button>
+                  </div>
+                </form>
               </div>
-
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-stone-100">
-                <button
-                  type="button"
-                  onClick={() => setNewProductModalOpen(false)}
-                  className="px-4 py-2.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 font-semibold"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2.5 rounded-xl bg-stone-900 hover:bg-stone-800 text-white font-bold shadow-sm"
-                >
-                  Agregar Insumo
-                </button>
-              </div>
-            </form>
-          </div>
+            </div>
+          )}
         </div>
-      )}
-    </div>
-  );
-}
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
